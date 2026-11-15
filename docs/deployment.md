@@ -34,6 +34,53 @@ Services:
 The `web` service waits for migrations, Redis, the bucket and processor health. `worker` and `scheduler` wait for web
 health because they call its internal API.
 
+## Vercel (web app only)
+
+Vercel can host the Next.js app. It **cannot** host the Python processor, RQ worker or scheduler: run those on a
+container host and set `PROCESSOR_URL` to its internal/public address. Document processing therefore still depends on
+that external service, Redis and S3-compatible storage.
+
+Project settings:
+
+| Setting | Value |
+| --- | --- |
+| Root Directory | `apps/web` |
+| Framework Preset | Next.js |
+| Include files outside the Root Directory | enabled |
+| Node.js | 20.11 or newer |
+
+Leave the install command on Vercel's npm-workspace detection. If the install cannot find the root lockfile, set it to
+`cd ../.. && npm ci`; the build command is `npm run build --workspace @parsepilot/web`, which also runs
+`prisma generate`.
+
+Environment variables required for the web app:
+
+| Variable | Notes |
+| --- | --- |
+| `DATABASE_URL` | Managed PostgreSQL. Use the provider's transaction-pooler URL for serverless functions. |
+| `SESSION_SECRET`, `DOWNLOAD_SIGNING_SECRET`, `INTERNAL_SERVICE_TOKEN` | Independent 32-byte random values. |
+| `APP_URL`, `NEXT_PUBLIC_APP_URL` | Public HTTPS origin. If omitted, the app falls back to Vercel's deployment URL. |
+| `STORAGE_DRIVER=s3` plus `S3_*` | Required: Vercel functions have a read-only filesystem apart from `/tmp`. |
+| `REDIS_URL` | Required for shared rate limiting and queue delivery. |
+| `PROCESSOR_URL` | Address of the separately hosted Python service. |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Only when billing is enabled. |
+
+Run migrations from CI or a workstation, not from the Vercel build:
+
+```bash
+DATABASE_URL='postgresql://...' npx prisma migrate deploy --schema apps/web/prisma/schema.prisma
+```
+
+Seed the public plans once; the marketing pricing section falls back to the catalogue defaults when the database is
+unavailable, but checkout needs the seeded rows.
+
+### Legal gate on Vercel
+
+Vercel previews (`VERCEL_ENV=preview`) render the draft legal pages and log the outstanding items, so you can review the
+site without pretending the business details are complete. A Vercel **production** deployment still refuses to start
+while the placeholders remain. Only for a non-public demonstration may you set `LEGAL_GATE_MODE=warn`; never use that
+mode for a commercial launch. Complete `apps/web/src/config/legal.ts` and set `legalReviewCompleted=true` first.
+
 ## Production hardening checklist
 
 - Terminate TLS at a reverse proxy or load balancer; forward `X-Forwarded-Proto`. HSTS is emitted when

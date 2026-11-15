@@ -44,7 +44,15 @@ export function boolEnv(name: string, fallback = false): boolean {
   return z.enum(['true', 'false', '1', '0']).safeParse(raw).data === 'true' || raw === '1';
 }
 
-export const appUrl = optionalEnv('APP_URL', optionalEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000')).replace(/\/$/, '');
+function deploymentUrl(): string | undefined {
+  const host = optionalEnv('VERCEL_PROJECT_PRODUCTION_URL', optionalEnv('VERCEL_URL'));
+  return host ? `https://${host}` : undefined;
+}
+
+export const appUrl = optionalEnv(
+  'APP_URL',
+  optionalEnv('NEXT_PUBLIC_APP_URL', deploymentUrl() ?? 'http://localhost:3000'),
+).replace(/\/$/, '');
 
 export const appConfig = {
   appUrl,
