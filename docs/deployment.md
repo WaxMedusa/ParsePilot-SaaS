@@ -34,26 +34,18 @@ Services:
 The `web` service waits for migrations, Redis, the bucket and processor health. `worker` and `scheduler` wait for web
 health because they call its internal API.
 
-## Vercel (web app only)
+## Vercel (web and processor services)
 
-Vercel can host the Next.js app. It **cannot** host the Python processor, RQ worker or scheduler: run those on a
-container host and set `PROCESSOR_URL` to its internal/public address. Document processing therefore still depends on
-that external service, Redis and S3-compatible storage.
+The root `vercel.json` deploys both services in one Vercel project (Services is a Vercel beta feature):
 
-Project settings:
+- `web` is the Next.js app at `apps/web`. Every public route is rewritten to it.
+- `processor` is the FastAPI enqueue/health service at `services/processor`. It has no public route; the web service
+  receives its internal URL through the `PROCESSOR_URL` service binding.
 
-| Setting | Value |
-| --- | --- |
-| Root Directory | `apps/web` |
-| Framework Preset | Next.js |
-| Include files outside the Root Directory | enabled |
-| Node.js | 20.11 or newer |
+Import the repository at the **root**, not `apps/web`, so Vercel can read `vercel.json`. Vercel builds each service
+separately and installs the npm workspace from the root lockfile. Node.js must be 20.11 or newer.
 
-Leave the install command on Vercel's npm-workspace detection. If the install cannot find the root lockfile, set it to
-`cd ../.. && npm ci`; the build command is `npm run build --workspace @parsepilot/web`, which also runs
-`prisma generate`.
-
-Environment variables required for the web app:
+Environment variables are shared by both services:
 
 | Variable | Notes |
 | --- | --- |
@@ -61,9 +53,14 @@ Environment variables required for the web app:
 | `SESSION_SECRET`, `DOWNLOAD_SIGNING_SECRET`, `INTERNAL_SERVICE_TOKEN` | Independent 32-byte random values. |
 | `APP_URL`, `NEXT_PUBLIC_APP_URL` | Public HTTPS origin. If omitted, the app falls back to Vercel's deployment URL. |
 | `STORAGE_DRIVER=s3` plus `S3_*` | Required: Vercel functions have a read-only filesystem apart from `/tmp`. |
-| `REDIS_URL` | Required for shared rate limiting and queue delivery. |
-| `PROCESSOR_URL` | Address of the separately hosted Python service. |
+| `REDIS_URL` | Required for rate limiting and for handing jobs to the worker. |
+| `AI_API_KEY` / `AI_*` | Optional; without a key the deterministic extraction rules are used. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Only when billing is enabled. |
+
+The FastAPI service only enqueues work. The long-running RQ **worker** and **scheduler** are not services; run them
+as Vercel Daemons (containers) or on any container host. They need `REDIS_URL`, `INTERNAL_SERVICE_TOKEN` and a
+`WEB_INTERNAL_URL` that reaches this deployment, and the worker also needs `AI_*`/OCR configuration. Without a worker,
+uploads queue but never finish. The existing `services/processor/Dockerfile` can be used for a daemon or container.
 
 Run migrations from CI or a workstation, not from the Vercel build:
 
