@@ -78,6 +78,13 @@ site without pretending the business details are complete. A Vercel **production
 while the placeholders remain. Only for a non-public demonstration may you set `LEGAL_GATE_MODE=warn`; never use that
 mode for a commercial launch. Complete `apps/web/src/config/legal.ts` and set `legalReviewCompleted=true` first.
 
+### Commit authorship on Vercel Hobby
+
+On a Hobby plan, Vercel blocks deployments of private repositories when the head commit author is not a member of the
+Vercel project. Automation commits under a bot identity are blocked even when the code is valid. Make deployment
+commits from the GitHub account that owns the Vercel project, or upgrade the team and add the collaborator. Correct
+this with a new owner-authored commit rather than rewriting already-pushed history.
+
 ## Production hardening checklist
 
 - Terminate TLS at a reverse proxy or load balancer; forward `X-Forwarded-Proto`. HSTS is emitted when
