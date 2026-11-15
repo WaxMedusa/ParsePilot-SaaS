@@ -1,0 +1,39 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.deleteButton {
+  color: var(--color-danger);
+}
+
+.deleteButton:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid #f3d4d2;
+  background: var(--color-danger-soft);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--color-danger);
+  flex-wrap: wrap;
+}
+
+.error {
+  font-size: 11px;
+  color: var(--color-danger);
+}
