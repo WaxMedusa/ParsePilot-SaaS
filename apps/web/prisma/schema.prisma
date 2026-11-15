@@ -1,0 +1,623 @@
+// ParsePilot data model.
+// PostgreSQL is the authoritative source of business data. Redis only carries
+// queue state, rate-limit counters and short-lived caches.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum WorkspaceRole {
+  owner
+  admin
+  member
+  viewer
+}
+
+enum DocumentStatus {
+  uploaded
+  queued
+  extracting_text
+  running_ocr
+  extracting_fields
+  validating
+  detecting_duplicates
+  completed
+  needs_review
+  failed
+}
+
+enum DocumentKind {
+  invoice
+  receipt
+  purchase_order
+  credit_note
+  bank_statement
+  contract
+  other
+  unknown
+}
+
+enum JobStatus {
+  queued
+  running
+  succeeded
+  failed
+  dead_letter
+  cancelled
+}
+
+enum JobType {
+  document_process
+  export_generate
+  retention_sweep
+}
+
+enum ExportFormat {
+  csv
+  xlsx
+}
+
+enum ExportStatus {
+  queued
+  running
+  completed
+  failed
+  expired
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  canceled
+  incomplete
+  unpaid
+}
+
+enum UsageLedgerKind {
+  processing_pages
+  export_rows
+}
+
+enum DataRequestType {
+  account_export
+  account_deletion
+  workspace_deletion
+  document_export
+}
+
+enum DataRequestStatus {
+  pending
+  processing
+  completed
+  failed
+  rejected
+  cancelled
+}
+
+enum BillingEventStatus {
+  received
+  processed
+  skipped
+  failed
+}
+
+enum IncidentSeverity {
+  sev1
+  sev2
+  sev3
+  sev4
+}
+
+enum IncidentStatus {
+  open
+  contained
+  investigating
+  recovering
+  resolved
+  closed
+}
+
+// ---------------------------------------------------------------------------
+// Identity & tenancy
+// ---------------------------------------------------------------------------
+
+model User {
+  id                String    @id @default(uuid()) @db.Uuid
+  email             String    @unique
+  passwordHash      String
+  name              String?
+  emailVerifiedAt   DateTime?
+  lastLoginAt       DateTime?
+  disabledAt        DateTime?
+  deletionRequestedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  memberships       WorkspaceMember[]
+  sessions          Session[]
+  passwordResets    PasswordResetToken[]
+  ownedWorkspaces   Workspace[]           @relation("WorkspaceOwner")
+  uploads           Document[]            @relation("DocumentUploader")
+  auditEntries      AuditLog[]
+  dataRequests      DataRequest[]
+  exports           Export[]
+  fieldEdits        ExtractionField[]     @relation("FieldEditor")
+  cookieConsent     CookieConsent?
+
+  @@index([createdAt])
+}
+
+model Workspace {
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String
+  slug           String    @unique
+  ownerId        String    @db.Uuid
+  billingEmail   String?
+  planCode       String    @default("free")
+  country        String?
+  deletedAt      DateTime?
+  deletionScheduledAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  owner          User      @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members        WorkspaceMember[]
+  documents      Document[]
+  jobs           ProcessingJob[]
+  exports        Export[]
+  usagePeriods   UsagePeriod[]
+  usageLedger    UsageLedger[]
+  subscription   Subscription?
+  auditEntries   AuditLog[]
+  dataRequests   DataRequest[]
+  deletionRecords DeletionRecord[]
+
+  @@index([ownerId])
+  @@index([deletedAt])
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid()) @db.Uuid
+  workspaceId String        @db.Uuid
+  userId      String        @db.Uuid
+  role        WorkspaceRole @default(member)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId, role])
+}
+
+// ---------------------------------------------------------------------------
+// Auth sessions & password resets
+// ---------------------------------------------------------------------------
+
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  userAgent  String?
+  ipHash     String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Documents & extraction
+// ---------------------------------------------------------------------------
+
+model Document {
+  id              String         @id @default(uuid()) @db.Uuid
+  workspaceId     String         @db.Uuid
+  uploadedById    String         @db.Uuid
+  originalName    String
+  storageKey      String         @unique
+  mimeType        String
+  detectedMimeType String?
+  sizeBytes       Int
+  pageCount       Int?
+  checksumSha256  String
+  status          DocumentStatus @default(uploaded)
+  kind            DocumentKind   @default(unknown)
+  language        String?
+  duplicateOfId   String?        @db.Uuid
+  duplicateScore  Float?
+  failureCode     String?
+  failureMessage  String?
+  metadata        Json?
+  deletedAt       DateTime?
+  purgeAfter      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  workspace       Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploadedBy      User           @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  duplicateOf     Document?      @relation("DocumentDuplicate", fields: [duplicateOfId], references: [id], onDelete: SetNull)
+  duplicates      Document[]     @relation("DocumentDuplicate")
+  extractionRuns  ExtractionRun[]
+  extractionFields ExtractionField[]
+  jobs            ProcessingJob[]
+  usageLedger     UsageLedger[]
+  deletionRecords DeletionRecord[]
+  dataRequests    DataRequest[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, deletedAt])
+  @@index([workspaceId, checksumSha256])
+  @@index([purgeAfter])
+  @@index([duplicateOfId])
+}
+
+model ExtractionRun {
+  id           String    @id @default(uuid()) @db.Uuid
+  documentId   String    @db.Uuid
+  version      Int
+  status       String    @default("running") // running | completed | failed
+  provider     String?
+  model        String?
+  ocrUsed      Boolean   @default(false)
+  pagesProcessed Int     @default(0)
+  durationMs   Int?
+  rawPayload   Json?     // sanitized provider response (no document text)
+  errorCode    String?
+  errorMessage String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  document     Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fields       ExtractionField[]
+
+  @@unique([documentId, version])
+  @@index([documentId, createdAt])
+  @@index([status])
+}
+
+model ExtractionField {
+  id             String    @id @default(uuid()) @db.Uuid
+  extractionRunId String   @db.Uuid
+  documentId     String    @db.Uuid
+  fieldKey       String
+  originalValue  String?
+  normalizedValue String?
+  editedValue    String?
+  confidence     Float?
+  valueType      String    @default("string") // string | date | currency | decimal | integer
+  editedById     String?   @db.Uuid
+  editedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  run            ExtractionRun @relation(fields: [extractionRunId], references: [id], onDelete: Cascade)
+  document       Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  editedBy       User?         @relation("FieldEditor", fields: [editedById], references: [id], onDelete: SetNull)
+
+  @@unique([extractionRunId, fieldKey])
+  @@index([documentId, fieldKey])
+}
+
+// ---------------------------------------------------------------------------
+// Background jobs
+// ---------------------------------------------------------------------------
+
+model ProcessingJob {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @db.Uuid
+  documentId     String?   @db.Uuid
+  exportId       String?   @db.Uuid
+  type           JobType
+  status         JobStatus @default(queued)
+  stage          String?
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(4)
+  idempotencyKey String    @unique
+  // Non-null while a job is queued/running; set to NULL when terminal. A unique
+  // index on activeKey prevents duplicate in-flight work for the same target.
+  activeKey      String?   @unique
+  availableAt    DateTime  @default(now())
+  lockedBy       String?
+  lockedAt       DateTime?
+  heartbeatAt    DateTime?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  errorCode      String?
+  errorCategory  String?   // transient | permanent | provider | timeout | quota
+  errorMessage   String?
+  timings        Json?
+  correlationId  String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  document       Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  export         Export?   @relation(fields: [exportId], references: [id], onDelete: Cascade)
+  deadLetters    DeadLetterJob[]
+
+  @@index([status, availableAt])
+  @@index([workspaceId, status])
+  @@index([documentId])
+  @@index([exportId])
+  @@index([status, heartbeatAt])
+}
+
+model DeadLetterJob {
+  id             String   @id @default(uuid()) @db.Uuid
+  jobId          String   @unique @db.Uuid
+  reason         String
+  payload        Json?
+  attempts       Int
+  lastError      String?
+  replayedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  job            ProcessingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Exports
+// ---------------------------------------------------------------------------
+
+model Export {
+  id           String       @id @default(uuid()) @db.Uuid
+  workspaceId  String       @db.Uuid
+  requestedById String      @db.Uuid
+  format       ExportFormat
+  status       ExportStatus @default(queued)
+  filters      Json?
+  storageKey   String?
+  sizeBytes    Int?
+  rowCount     Int?
+  errorCode    String?
+  errorMessage String?
+  expiresAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  requestedBy  User         @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+  jobs         ProcessingJob[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Billing & usage
+// ---------------------------------------------------------------------------
+
+model Plan {
+  code            String   @id
+  name            String
+  description     String
+  priceCents      Int
+  currency        String   @default("USD")
+  monthlyPageLimit Int
+  maxUploadMb     Int
+  maxWorkspaces   Int      @default(1)
+  maxMembers      Int      @default(3)
+  features        Json
+  stripePriceId   String?
+  isPublic        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscriptions   Subscription[]
+}
+
+model Subscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  workspaceId          String             @unique @db.Uuid
+  planCode             String
+  status               SubscriptionStatus @default(active)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?            @unique
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  trialEndsAt          DateTime?
+  lastPaymentFailedAt  DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  plan                 Plan               @relation(fields: [planCode], references: [code], onDelete: Restrict)
+
+  @@index([status])
+  @@index([stripeCustomerId])
+}
+
+model UsagePeriod {
+  id                String   @id @default(uuid()) @db.Uuid
+  workspaceId       String   @db.Uuid
+  periodStart       DateTime
+  periodEnd         DateTime
+  pagesProcessed    Int      @default(0)
+  documentsProcessed Int     @default(0)
+  exportRows        Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, periodStart])
+  @@index([workspaceId, periodEnd])
+}
+
+model UsageLedger {
+  id             String          @id @default(uuid()) @db.Uuid
+  workspaceId    String          @db.Uuid
+  documentId     String?         @db.Uuid
+  kind           UsageLedgerKind
+  quantity       Int
+  idempotencyKey String          @unique
+  reason         String
+  occurredAt     DateTime        @default(now())
+  createdAt      DateTime        @default(now())
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  document       Document?       @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, occurredAt])
+  @@index([documentId])
+}
+
+model BillingEvent {
+  id              String             @id @default(uuid()) @db.Uuid
+  stripeEventId   String             @unique
+  type            String
+  status          BillingEventStatus @default(received)
+  payloadHash     String
+  workspaceId     String?            @db.Uuid
+  processedAt     DateTime?
+  errorMessage    String?
+  attemptCount    Int                @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([status, createdAt])
+  @@index([type])
+}
+
+// ---------------------------------------------------------------------------
+// Privacy, retention, audit
+// ---------------------------------------------------------------------------
+
+model DataRequest {
+  id            String            @id @default(uuid()) @db.Uuid
+  workspaceId   String?           @db.Uuid
+  userId        String            @db.Uuid
+  documentId    String?           @db.Uuid
+  type          DataRequestType
+  status        DataRequestStatus @default(pending)
+  notes         String?
+  resultStorageKey String?
+  resultExpiresAt  DateTime?
+  failureReason String?
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  workspace     Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document      Document?         @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([workspaceId, status])
+  @@index([status, createdAt])
+}
+
+model DeletionRecord {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String?   @db.Uuid
+  documentId   String?   @db.Uuid
+  target       String    // document | workspace | account | export | storage_object
+  targetId     String
+  status       String    @default("scheduled") // scheduled | completed | failed
+  storageKey   String?
+  attempts     Int       @default(0)
+  lastError    String?
+  scheduledAt  DateTime  @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  workspace    Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  document     Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduledAt])
+  @@index([workspaceId])
+}
+
+model AuditLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String?   @db.Uuid
+  actorId     String?   @db.Uuid
+  action      String
+  targetType  String?
+  targetId    String?
+  metadata    Json?
+  ipHash      String?
+  requestId   String?
+  createdAt   DateTime  @default(now())
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  actor       User?      @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
+
+model CookieConsent {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String?   @unique @db.Uuid
+  anonymousId   String?
+  preferences   Json
+  policyVersion String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([anonymousId])
+}
+
+model SecurityIncident {
+  id                 String           @id @default(uuid()) @db.Uuid
+  reference          String           @unique
+  title              String
+  severity           IncidentSeverity
+  status             IncidentStatus   @default(open)
+  detectedAt         DateTime
+  containedAt        DateTime?
+  resolvedAt         DateTime?
+  affectedSystems    String[]
+  summary            String
+  investigation      String?
+  resolution         String?
+  customerNotifiedAt DateTime?
+  postmortemUrl      String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([status, severity])
+}

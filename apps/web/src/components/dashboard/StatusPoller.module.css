@@ -1,0 +1,34 @@
+.strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid #d7e3f5;
+  background: var(--color-info-soft);
+  border-radius: var(--radius-sm);
+  color: #2c5a9c;
+  font-size: 11.5px;
+}
+
+.label {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: #5b7aa8;
+}
+
+.spinner {
+  animation: spin 900ms linear infinite;
+  flex: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,136 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+
+.input {
+  height: 40px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: 0 11px;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
+.input::placeholder {
+  color: var(--color-faint);
+}
+
+.input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 0;
+  border-color: var(--color-primary);
+}
+
+.hint {
+  font-size: 10.5px;
+  color: var(--color-faint);
+  line-height: 1.5;
+}
+
+.rowBetween {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+  margin-top: -2px;
+}
+
+.submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.submit:hover {
+  background: var(--color-primary-strong);
+  border-color: var(--color-primary-strong);
+  color: #fff;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.errorBox,
+.successBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  margin-bottom: 12px;
+  border: 1px solid transparent;
+}
+
+.errorBox {
+  background: var(--color-danger-soft);
+  border-color: #f3d4d2;
+  color: var(--color-danger);
+}
+
+.successBox {
+  background: var(--color-success-soft);
+  border-color: #cfe9dd;
+  color: var(--color-success);
+}
+
+.successBox a {
+  color: var(--color-success);
+  text-decoration: underline;
+}
+
+.devNote {
+  margin-top: 5px;
+  color: #3f6b56;
+}
+
+.inlineLink {
+  color: var(--color-primary-strong);
+  font-weight: 600;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.terms {
+  margin-top: 14px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--color-faint);
+}
+
+.footnote {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--color-muted);
+}

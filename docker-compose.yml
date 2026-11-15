@@ -1,0 +1,220 @@
+# ParsePilot full stack.
+#
+#   cp .env.docker.example .env
+#   # complete src/config/legal.ts first: the web container refuses to start in
+#   # production while legal placeholders remain (launch gate).
+#   docker compose up --build
+#
+# The compose file is production-parity, not a hardened production deployment.
+# Terminate TLS in front of web and keep the datastore ports unexposed.
+name: parsepilot
+
+x-app-env: &app-env
+  NODE_ENV: production
+  APP_URL: ${APP_URL:-http://localhost:3000}
+  NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+  NEXT_PUBLIC_SUPPORT_EMAIL: ${NEXT_PUBLIC_SUPPORT_EMAIL:-}
+  DATABASE_URL: postgresql://parsepilot:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/parsepilot?schema=public
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
+  DOWNLOAD_SIGNING_SECRET: ${DOWNLOAD_SIGNING_SECRET:?Set DOWNLOAD_SIGNING_SECRET in .env}
+  INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Set INTERNAL_SERVICE_TOKEN in .env}
+  PROCESSOR_URL: http://processor:8000
+  PROCESSOR_TIMEOUT_MS: ${PROCESSOR_TIMEOUT_MS:-10000}
+  STORAGE_DRIVER: s3
+  S3_ENDPOINT: http://minio:9000
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_BUCKET: ${S3_BUCKET:-parsepilot-documents}
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-parsepilot}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-parsepilot-local-secret}
+  S3_FORCE_PATH_STYLE: "true"
+  MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+  STRIPE_PRICE_STARTER: ${STRIPE_PRICE_STARTER:-}
+  STRIPE_PRICE_GROWTH: ${STRIPE_PRICE_GROWTH:-}
+  STRIPE_PRICE_ENTERPRISE: ${STRIPE_PRICE_ENTERPRISE:-}
+
+x-processor-env: &processor-env
+  NODE_ENV: production
+  INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Set INTERNAL_SERVICE_TOKEN in .env}
+  WEB_INTERNAL_URL: http://web:3000
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  PROCESSING_QUEUE: ${PROCESSING_QUEUE:-parsepilot}
+  PROCESSOR_VERSION: "1.0.0"
+  AI_API_KEY: ${AI_API_KEY:-}
+  AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+  AI_MODEL: ${AI_MODEL:-gpt-4.1-mini}
+  PROCESSOR_AI_ENABLED: ${PROCESSOR_AI_ENABLED:-true}
+  OCR_ENABLED: ${OCR_ENABLED:-true}
+  PROCESSOR_OCR_MAX_PAGES: ${PROCESSOR_OCR_MAX_PAGES:-40}
+  PROCESSOR_MAX_PAGES: ${PROCESSOR_MAX_PAGES:-200}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: parsepilot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-parsepilot-local-password}
+      POSTGRES_DB: parsepilot
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parsepilot -d parsepilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-parsepilot}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-parsepilot-local-secret}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      for i in $$(seq 1 30); do
+        mc alias set local http://minio:9000 ${S3_ACCESS_KEY_ID:-parsepilot} ${S3_SECRET_ACCESS_KEY:-parsepilot-local-secret} >/dev/null 2>&1 && break;
+        sleep 2;
+      done;
+      mc mb --ignore-existing local/${S3_BUCKET:-parsepilot-documents} &&
+      mc anonymous set none local/${S3_BUCKET:-parsepilot-documents}
+      "
+    restart: "no"
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: migrator
+    environment:
+      <<: *app-env
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: runner
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      processor:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  processor:
+    build:
+      context: .
+      dockerfile: services/processor/Dockerfile
+    environment: *processor-env
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "${PROCESSOR_PORT:-8000}:8000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/processor/Dockerfile
+    command: ["python", "-m", "app.worker"]
+    environment:
+      <<: *processor-env
+      WORKER_ID: worker-1
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 60s
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: services/processor/Dockerfile
+    command: ["python", "-m", "app.scheduler"]
+    environment:
+      <<: *processor-env
+      WORKER_ID: scheduler-1
+      PROCESSOR_SCHEDULER_INTERVAL_SECONDS: ${PROCESSOR_SCHEDULER_INTERVAL_SECONDS:-3600}
+      PROCESSOR_RECONCILE_INTERVAL_SECONDS: ${PROCESSOR_RECONCILE_INTERVAL_SECONDS:-300}
+    depends_on:
+      web:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

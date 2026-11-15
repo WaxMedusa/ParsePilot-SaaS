@@ -1,0 +1,153 @@
+.hero {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: clamp(48px, 6vw, 88px) 0 clamp(56px, 7vw, 104px);
+  overflow: hidden;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+}
+
+.copy {
+  max-width: 560px;
+}
+
+.headline {
+  margin: 18px 0 0;
+  font-size: var(--text-4xl);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  text-align: left;
+}
+
+.accent {
+  color: var(--color-primary);
+}
+
+.description {
+  margin-top: 22px;
+  max-width: 46ch;
+  color: var(--color-muted);
+  font-size: var(--text-md);
+  line-height: 1.7;
+}
+
+.actions {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.proof {
+  list-style: none;
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.proofItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.proofItem svg {
+  color: var(--color-success);
+}
+
+.metrics {
+  margin: 36px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  gap: 22px;
+}
+
+.metric dt {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink);
+}
+
+.metric dd {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.metricDivider {
+  background: var(--color-border);
+  width: 1px;
+}
+
+.visual {
+  position: relative;
+}
+
+.caption {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-faint);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.captionDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+}
+
+@media (max-width: 1024px) {
+  .inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 48px;
+  }
+  .copy {
+    max-width: 640px;
+  }
+  .headline {
+    font-size: clamp(2.5rem, 7vw, 3.6rem);
+  }
+  .caption {
+    margin-top: 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .headline br {
+    display: none;
+  }
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .metrics {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .metricDivider {
+    display: none;
+  }
+  .metric + .metric {
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+  }
+}
