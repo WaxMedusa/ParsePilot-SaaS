@@ -11,7 +11,6 @@ export type PublicPlan = {
   monthlyPageLimit: number;
   maxUploadMb: number;
   maxMembers: number;
-  maxWorkspaces: number;
   features: string[];
   stripeConfigured: boolean;
 };
@@ -29,7 +28,6 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
       monthlyPageLimit: plan.monthlyPageLimit,
       maxUploadMb: plan.maxUploadMb,
       maxMembers: plan.maxMembers,
-      maxWorkspaces: plan.maxWorkspaces,
       features: plan.features as string[],
       stripeConfigured: Boolean(plan.stripePriceId && appConfig.stripe.secretKey),
     }));
@@ -47,7 +45,6 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
       monthlyPageLimit: plan.monthlyPageLimit,
       maxUploadMb: plan.maxUploadMb,
       maxMembers: plan.maxMembers,
-      maxWorkspaces: plan.maxWorkspaces,
       features: [...plan.features],
       stripeConfigured: Boolean(process.env[plan.stripePriceIdEnv] && appConfig.stripe.secretKey),
     }));

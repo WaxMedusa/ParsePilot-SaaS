@@ -128,7 +128,6 @@ export async function getUsageSnapshot(workspaceId: string) {
       monthlyPageLimit: plan.monthlyPageLimit,
       maxUploadMb: plan.maxUploadMb,
       maxMembers: plan.maxMembers,
-      maxWorkspaces: plan.maxWorkspaces,
       features: plan.features as string[],
     },
     subscription: subscription
