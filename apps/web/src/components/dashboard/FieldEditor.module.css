@@ -1,73 +1,84 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 7px;
 }
 
 .topline {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
+  padding-bottom: 4px;
 }
 
 .version {
+  color: var(--color-primary-strong);
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--color-muted);
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-  padding: 3px 8px;
+  font-size: 7.5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .hint {
-  font-size: 10.5px;
   color: var(--color-faint);
+  font-size: 8.5px;
+  line-height: 1.55;
 }
 
 .error {
-  font-size: 11px;
   color: var(--color-danger);
+  font-size: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--color-danger);
 }
 
 .group {
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.groupHead {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 3px;
 }
 
 .groupLabel {
-  font-size: 9.5px;
-  font-weight: 700;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.045em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+}
+
+.groupCount {
   color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
 }
 
 .list {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border-top: 1px solid var(--color-border);
 }
 
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 76px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.45fr) 76px;
+  gap: 14px;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px 0;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.row:last-child {
-  border-bottom: none;
+  background: transparent;
 }
 
 .row:hover {
-  background: #fcfcfe;
+  background: var(--color-canvas);
 }
 
 .labelCell {
@@ -78,15 +89,16 @@
 }
 
 .label {
-  font-size: 11.5px;
-  font-weight: 500;
   color: var(--color-text-soft);
+  font-size: 10px;
+  font-weight: 470;
 }
 
 .key {
-  font-family: var(--font-mono);
-  font-size: 9px;
   color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.01em;
 }
 
 .valueCell {
@@ -96,14 +108,14 @@
 .valueRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
 }
 
 .value {
-  font-size: 12px;
-  font-weight: 600;
   color: var(--color-ink);
+  font-size: 10.5px;
+  font-weight: 520;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -116,107 +128,121 @@
 }
 
 .editedTag {
-  font-size: 8.5px;
-  font-weight: 700;
+  color: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-primary-strong);
-  background: var(--color-primary-soft);
-  border: 1px solid #e3e0ff;
-  border-radius: var(--radius-xs);
-  padding: 1px 5px;
+  border-bottom: 1px solid var(--color-warning);
+  padding-bottom: 1px;
   flex: none;
 }
 
 .editButton {
   margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
-  background: var(--color-surface);
-  color: var(--color-muted);
+  padding: 1px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   flex: none;
 }
 
 .editButton:hover {
-  border-color: var(--color-primary);
   color: var(--color-primary-strong);
+  border-color: var(--color-primary);
 }
 
 .editRow {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .input {
   flex: 1;
   min-width: 0;
-  height: 28px;
-  padding: 0 8px;
+  height: 27px;
+  padding: 0 7px;
   border: 1px solid var(--color-primary);
-  border-radius: var(--radius-xs);
-  font-size: 11.5px;
+  border-radius: 0;
   background: var(--color-surface);
+  font-size: 10.5px;
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 
 .saveButton {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 28px;
+  height: 27px;
   padding: 0 8px;
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-xs);
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
+  border: 1px solid var(--color-ink);
+  border-radius: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: 8.5px;
+  font-weight: 500;
   flex: none;
+}
+
+.saveButton:hover {
+  background: var(--color-primary-strong);
+  border-color: var(--color-primary-strong);
 }
 
 .cancelButton {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
-  background: var(--color-surface);
+  height: 27px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 7px;
   flex: none;
 }
 
+.cancelButton:hover {
+  color: var(--color-ink);
+  border-color: var(--color-border);
+}
+
 .original {
-  margin-top: 2px;
-  font-size: 9.5px;
+  margin-top: 3px;
   color: var(--color-faint);
   font-family: var(--font-mono);
+  font-size: 7.5px;
+  line-height: 1.4;
 }
 
 .confidenceCell {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   justify-content: flex-end;
 }
 
 .confidenceLabel {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
   color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
   flex: none;
 }
 
 .confidenceBar {
-  width: 34px;
-  height: 3px;
-  border-radius: 2px;
+  width: 30px;
+  height: 2px;
+  border-radius: 0;
   background: var(--color-surface-strong);
   overflow: hidden;
   flex: none;
@@ -225,39 +251,50 @@
 .confidenceFill {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 .confidenceEmpty {
-  font-family: var(--font-mono);
-  font-size: 10px;
   color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 8px;
 }
 
 .empty {
-  padding: 26px 20px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
+  padding: 22px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
 }
 
 .emptyTitle {
-  font-size: 12.5px;
-  font-weight: 600;
   color: var(--color-ink);
+  font-size: 11px;
+  font-weight: 520;
 }
 
 .emptyBody {
-  margin-top: 4px;
-  font-size: 11.5px;
+  margin-top: 5px;
   color: var(--color-muted);
-  line-height: 1.6;
-  max-width: 56ch;
+  font-size: 10px;
+  line-height: 1.65;
+  max-width: 54ch;
 }
 
-@media (max-width: 620px) {
+@media (max-width: 720px) {
   .row {
-    grid-template-columns: minmax(0, 1fr) 64px;
+    grid-template-columns: minmax(0, 1fr) 72px;
+    gap: 8px 12px;
+    padding: 11px 0;
+  }
+  .label {
+    font-size: 11px;
+  }
+  .key {
+    font-size: 8px;
+  }
+  .value {
+    font-size: 12px;
   }
   .valueCell {
     grid-column: 1 / -1;
@@ -266,5 +303,28 @@
   .confidenceCell {
     grid-column: 2;
     grid-row: 1;
+  }
+  .editButton {
+    min-height: 30px;
+    padding: 6px 0 4px;
+    font-size: 8.5px;
+  }
+  .editRow {
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .input {
+    flex-basis: 100%;
+    height: 34px;
+    font-size: 12px;
+  }
+  .saveButton,
+  .cancelButton {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 9px;
+  }
+  .original {
+    font-size: 8px;
   }
 }

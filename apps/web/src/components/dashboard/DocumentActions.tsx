@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { apiRequest, errorMessage } from '@/lib/client/api';
 import styles from './DocumentActions.module.css';
@@ -12,9 +11,10 @@ type Props = {
   workspaceId: string;
   status: string;
   canRetry: boolean;
+  canReview: boolean;
 };
 
-export function DocumentActions({ documentId, workspaceId, status, canRetry }: Props) {
+export function DocumentActions({ documentId, workspaceId, status, canRetry, canReview }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +48,9 @@ export function DocumentActions({ documentId, workspaceId, status, canRetry }: P
   const retry = () =>
     run('retry', () => apiRequest(`/api/v1/documents/${documentId}/retry`, { method: 'POST', workspaceId }));
 
+  const review = () =>
+    run('review', () => apiRequest(`/api/v1/documents/${documentId}/review`, { method: 'POST', workspaceId }));
+
   const remove = () =>
     run('delete', async () => {
       await apiRequest(`/api/v1/documents/${documentId}`, { method: 'DELETE', workspaceId });
@@ -59,15 +62,20 @@ export function DocumentActions({ documentId, workspaceId, status, canRetry }: P
   return (
     <div className={styles.wrap}>
       <div className={styles.actions}>
-        <Button variant="secondary" size="sm" icon={<Download />} onClick={download} disabled={busy !== null}>
-          {busy === 'download' ? 'Preparing…' : 'Download'}
+        <Button variant="secondary" size="sm" onClick={download} disabled={busy !== null}>
+          {busy === 'download' ? 'Preparing…' : 'Download original'}
         </Button>
         {canRetry ? (
-          <Button variant="secondary" size="sm" icon={<RotateCcw />} onClick={retry} disabled={busy !== null}>
+          <Button variant="secondary" size="sm" onClick={retry} disabled={busy !== null}>
             {busy === 'retry' ? 'Re-queuing…' : 'Retry failed job'}
           </Button>
         ) : null}
-        <Button variant="secondary" size="sm" icon={<RefreshCw />} onClick={reprocess} disabled={busy !== null || processing}>
+        {canReview ? (
+          <Button variant="primary" size="sm" onClick={review} disabled={busy !== null}>
+            {busy === 'review' ? 'Marking reviewed…' : 'Mark reviewed'}
+          </Button>
+        ) : null}
+        <Button variant="secondary" size="sm" onClick={reprocess} disabled={busy !== null || processing}>
           {busy === 'process' ? 'Queuing…' : 'Reprocess'}
         </Button>
         {confirmDelete ? (
@@ -81,7 +89,7 @@ export function DocumentActions({ documentId, workspaceId, status, canRetry }: P
             </Button>
           </span>
         ) : (
-          <Button variant="ghost" size="sm" icon={<Trash2 />} onClick={() => setConfirmDelete(true)} className={styles.deleteButton}>
+          <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)} className={styles.deleteButton}>
             Delete
           </Button>
         )}

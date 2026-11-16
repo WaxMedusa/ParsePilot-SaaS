@@ -23,6 +23,7 @@ export type AuditAction =
   | 'document.purged'
   | 'document.download_url_created'
   | 'document.processed'
+  | 'document.reviewed'
   | 'document.process_failed'
   | 'job.retried'
   | 'job.dead_lettered'

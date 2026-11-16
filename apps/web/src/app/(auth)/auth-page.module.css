@@ -1,33 +1,35 @@
 .eyebrow {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--color-primary-strong);
 }
 
 .title {
-  margin-top: 10px;
-  font-size: clamp(1.6rem, 2.6vw, 2.05rem);
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+  margin-top: 12px;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  font-weight: 470;
+  letter-spacing: -0.05em;
+  line-height: 1;
 }
 
 .lede {
-  margin: 10px 0 26px;
+  margin: 12px 0 26px;
   color: var(--color-muted);
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.7;
-  max-width: 46ch;
+  max-width: 44ch;
 }
 
 .notice {
   margin-top: 22px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
   color: var(--color-faint);
-  font-size: 10.5px;
+  font-size: 9.5px;
   line-height: 1.65;
 }

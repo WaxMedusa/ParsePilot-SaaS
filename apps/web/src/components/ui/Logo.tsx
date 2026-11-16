@@ -6,9 +6,9 @@ export function Logo({ href = '/', tone = 'default' }: { href?: string; tone?: '
     <Link href={href} className={`${styles.logo} ${tone === 'inverse' ? styles.inverse : ''}`} aria-label="ParsePilot home">
       <span className={styles.mark} aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M6 3.75h7.2L18 8.55V20.25H6z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-          <path d="M13 3.9v4.9h4.8" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-          <path d="M9 12.2h6M9 15.4h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          <path d="M5 4.25h8.15L19 10.1v9.65H5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="miter" />
+          <path d="M13.15 4.25v5.85H19" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="miter" />
+          <path d="M8.2 13.2h7.6M8.2 16.2h5.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
         </svg>
       </span>
       <span className={styles.word}>ParsePilot</span>

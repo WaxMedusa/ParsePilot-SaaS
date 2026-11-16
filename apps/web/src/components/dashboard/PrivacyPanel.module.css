@@ -1,15 +1,16 @@
 .requests {
   margin-top: 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  overflow: visible;
 }
 
 .requestRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 9px 0;
   border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
 }
@@ -27,15 +28,15 @@
 }
 
 .requestType {
-  font-size: 11.5px;
-  font-weight: 600;
   color: var(--color-ink);
+  font-size: 10px;
+  font-weight: 500;
 }
 
 .requestMeta {
-  font-size: 10px;
   color: var(--color-faint);
   font-family: var(--font-mono);
+  font-size: 7.5px;
   overflow-wrap: anywhere;
 }
 
@@ -58,16 +59,7 @@
 }
 
 .sessionIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-xs);
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  color: var(--color-muted);
-  flex: none;
+  display: none;
 }
 
 .sessionMain {
@@ -79,54 +71,58 @@
 }
 
 .sessionAgent {
-  font-size: 11.5px;
   color: var(--color-text-soft);
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 470;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .sessionMeta {
-  font-size: 9.5px;
   color: var(--color-faint);
   font-family: var(--font-mono);
+  font-size: 7.5px;
 }
 
 .current {
-  font-size: 9.5px;
-  font-weight: 600;
   color: var(--color-success);
-  background: var(--color-success-soft);
-  border: 1px solid #cfe9dd;
-  border-radius: var(--radius-pill);
-  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   flex: none;
 }
 
 .dangerCard {
-  border-color: #f0d5d3;
+  border-top-color: var(--color-danger);
 }
 
 .dangerCard .cardHead {
-  background: #fffafa;
+  background: transparent;
 }
 
 .details {
   margin-top: 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
 }
 
 .summary {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 11px 12px;
-  font-size: 11.5px;
-  font-weight: 600;
+  padding: 10px 0;
   color: var(--color-danger);
+  font-size: 10px;
+  font-weight: 500;
   cursor: pointer;
   list-style: none;
 }
@@ -136,33 +132,33 @@
 }
 
 .summary:hover {
-  background: var(--color-danger-soft);
+  background: transparent;
 }
 
 .detailsBody {
-  padding: 0 12px 14px;
+  padding: 12px 0 14px;
   border-top: 1px solid var(--color-border);
-  padding-top: 12px;
 }
 
 .code {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
-  padding: 1px 5px;
   color: var(--color-text-soft);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-strong);
+  border-radius: 0;
+  padding: 0 1px;
 }
 
 .checkboxRow {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 11px;
-  color: var(--color-text-soft);
-  line-height: 1.55;
   margin: 4px 0 12px;
+  color: var(--color-text-soft);
+  font-size: 9.5px;
+  line-height: 1.6;
   cursor: pointer;
 }
 

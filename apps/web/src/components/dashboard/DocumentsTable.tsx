@@ -23,7 +23,7 @@ export function DocumentsTable({ documents, showEmpty = true }: { documents: Doc
 
   return (
     <div className={styles.tableWrap}>
-      <table className={styles.table}>
+      <table className={`${styles.table} ${styles.documentsTable}`}>
         <thead>
           <tr>
             <th>Document</th>
@@ -38,7 +38,7 @@ export function DocumentsTable({ documents, showEmpty = true }: { documents: Doc
         <tbody>
           {documents.map((document) => (
             <tr key={document.id}>
-              <td>
+              <td data-label="Document">
                 <div className={styles.cellMain}>
                   <Link href={`/dashboard/documents/${document.id}`} className={styles.cellTitle}>
                     {document.originalName}
@@ -48,21 +48,21 @@ export function DocumentsTable({ documents, showEmpty = true }: { documents: Doc
                   </span>
                 </div>
               </td>
-              <td>
+              <td data-label="Counterparty">
                 <div className={styles.cellMain}>
                   <span className={styles.cellTitle}>{document.vendorName ?? '—'}</span>
                   <span className={styles.cellSub}>{document.documentNumber ?? document.id.slice(0, 8)}</span>
                 </div>
               </td>
-              <td className={styles.amount}>{document.totalAmount ? formatAmount(document.totalAmount, document.currency) : '—'}</td>
-              <td>
+              <td data-label="Amount" className={styles.amount}>{document.totalAmount ? formatAmount(document.totalAmount, document.currency) : '—'}</td>
+              <td data-label="Status">
                 <div className={styles.cellMain} style={{ alignItems: 'flex-start', gap: 3 }}>
                   <StatusBadge status={document.status} />
                   {document.duplicateOfId ? <span className={styles.cellSub}>possible duplicate</span> : null}
                 </div>
               </td>
-              <td className={styles.amount}>{document.pageCount ?? '—'}</td>
-              <td className={styles.amount}>{formatDate(document.createdAt)}</td>
+              <td data-label="Pages" className={styles.amount}>{document.pageCount ?? '—'}</td>
+              <td data-label="Uploaded" className={styles.amount}>{formatDate(document.createdAt)}</td>
               <td>
                 <Link href={`/dashboard/documents/${document.id}`} className={styles.tag}>
                   Open

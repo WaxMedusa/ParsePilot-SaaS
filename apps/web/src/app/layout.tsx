@@ -1,4 +1,7 @@
 import type { Metadata, Viewport } from 'next';
+import '@fontsource-variable/instrument-sans';
+import '@fontsource/instrument-serif/400-italic.css';
+import '@fontsource-variable/jetbrains-mono';
 import './globals.css';
 import { CookieBanner } from '@/components/cookies/CookieBanner';
 import { CsrfBootstrap } from '@/components/security/CsrfBootstrap';
@@ -17,7 +20,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#ffffff',
+  themeColor: '#f3f1eb',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

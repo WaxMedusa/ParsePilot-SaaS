@@ -72,6 +72,99 @@ def _money(pattern: str, text: str) -> str | None:
     return normalize_decimal(raw)
 
 
+_GENERIC_PARTY = re.compile(
+    r"^(?:tax\s+)?(?:invoice|receipt|purchase\s+order|credit\s+note|bill|statement|quotation|estimate|document)"
+    r"(?:\s+(?:no\.?|number|#|date))?$",
+    re.I,
+)
+_ADDRESS_HINT = re.compile(
+    r"\b(?:street|st\.?|road|rd\.?|avenue|ave\.?|boulevard|blvd\.?|lane|ln\.?|drive|dr\.?|suite|floor|unit|building|box|postal|zip)"
+    r"\b",
+    re.I,
+)
+_PARTY_LABEL = re.compile(
+    r"^(?:bill\s+to|ship\s+to|customer|client|sold\s+to|invoice\s+(?:date|number|no|#)|receipt\s+(?:date|number|no|#)|"
+    r"date|due\s+date|total|subtotal|tax|amount|terms|po\b|purchase\s+order|iban|vat|customer\s+id|page|phone|email|www)\b",
+    re.I,
+)
+_COMPANY_SUFFIX = re.compile(
+    r"\b(?:ltd|limited|llc|inc|incorporated|corp|corporation|co|company|gmbh|plc|llp|pty|sarl|s\.a\.|b\.v\.|n\.v\.|ag|oy|ab|spa|srl)\b\.?",
+    re.I,
+)
+
+
+def _clean_party(value: str | None) -> str | None:
+    if not value:
+        return None
+    cleaned = re.sub(r"\s+", " ", value).strip(" \t:.-|,;")
+    return cleaned[:90] or None
+
+
+def _is_generic_party(value: str | None) -> bool:
+    """Rejects page headings and labels that are not party names."""
+    if not value:
+        return True
+    candidate = value.strip()
+    normalized = re.sub(r"[^a-z0-9]+", " ", candidate.lower()).strip()
+    if not normalized or _GENERIC_PARTY.fullmatch(normalized):
+        return True
+    if _PARTY_LABEL.match(candidate):
+        return True
+    if _ADDRESS_HINT.search(candidate):
+        return True
+    if re.fullmatch(r"[\d\s.,$€£¥₹%()+-]+", candidate):
+        return True
+    if "@" in candidate or "http" in candidate.lower():
+        return True
+    if re.search(r"\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b", candidate):
+        return True
+    if re.search(r"\b(?:page|of)\s+\d+\b", candidate, re.I):
+        return True
+    return len(candidate) > 90
+
+
+def _best_vendor_from_lines(text: str) -> str | None:
+    """Scores the first few lines instead of blindly taking the first one.
+
+    Templates often put a generic word such as INVOICE on the first line. A
+    company-like line near the top is a much better vendor candidate; rejecting
+    headings and addresses also prevents confidently wrong values from being
+    written into the review queue.
+    """
+    lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines() if line.strip()]
+    best: str | None = None
+    best_score = 0
+
+    for index, line in enumerate(lines[:20]):
+        if re.match(r"^(?:bill\s+to|ship\s+to|customer|client|sold\s+to)\b", line, re.I):
+            break
+        candidate = _clean_party(line)
+        if not candidate or _is_generic_party(candidate):
+            continue
+        if len(candidate.split()) > 8:
+            continue
+        # Long digit sequences are usually phone/address/date fragments, not names.
+        if re.search(r"\b\d{3,}\b", candidate):
+            continue
+
+        score = 0
+        if _COMPANY_SUFFIX.search(candidate):
+            score += 4
+        words = candidate.split()
+        if 1 <= len(words) <= 6 and not re.search(r"\d", candidate):
+            score += 2
+        if index <= 4:
+            score += 2
+        if candidate.istitle() or candidate.isupper():
+            score += 1
+
+        if score > best_score:
+            best = candidate
+            best_score = score
+
+    return best if best_score >= 3 else None
+
+
 def extract_rules(text: str) -> dict[str, Any]:
     currency_raw = _first_match(text, [r"\b(?:currency|curr\.?)\s*[:\-]?\s*([A-Za-z]{3})\b"])
     if not currency_raw:
@@ -96,12 +189,12 @@ def extract_rules(text: str) -> dict[str, Any]:
     vendor = _first_match(
         text,
         [
-            r"(?:from|seller|vendor|supplier)\s*[:\-]\s*([^\n]{2,90})",
+            r"(?:from|seller|vendor|supplier|bill\s+from)\s*[:\-]\s*([^\n]{2,90})",
         ],
     )
-    if not vendor:
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        vendor = lines[0][:90] if lines else None
+    vendor = _clean_party(vendor)
+    if _is_generic_party(vendor):
+        vendor = _best_vendor_from_lines(text)
 
     customer = _first_match(text, [r"(?:bill to|customer|client|buyer)\s*[:\-]\s*([^\n]{2,90})"])
     document_number = _first_match(
@@ -120,7 +213,10 @@ def extract_rules(text: str) -> dict[str, Any]:
     amount_paid = _money(r"(?:amount paid|paid|balance paid)\s*[:\-]?\s*([$€£¥₹]?\s?[\d.,]+)", text)
 
     subtotal = _money(r"(?:subtotal|sub-total|net amount)\s*[:\-]?\s*([$€£¥₹]?\s?[\d.,]+)", text)
-    tax = _money(r"(?:tax|vat|sales tax|gst)\s*(?:\([^)]*\))?\s*[:\-]?\s*([$€£¥₹]?\s?[\d.,]+)", text)
+    tax = _money(
+        r"(?:sales\s+tax|tax|vat|gst)\b\s*(?:amount)?\s*(?:\([^)]*\))?\s*(?:\d+(?:\.\d+)?\s*%)?\s*[:\-]?\s*([$€£¥₹]?\s?[\d.,]+)",
+        text,
+    )
     total = _money(r"\b(?:grand total|total due|amount due|total)\b\s*[:\-]?\s*([$€£¥₹]?\s?[\d.,]+)", text)
 
     line_items = extract_line_items(text)

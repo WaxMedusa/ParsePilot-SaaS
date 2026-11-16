@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, CheckCircle2, FileText, Layers, Upload } from 'lucide-react';
 import { requireWorkspaceAuth } from '@/lib/auth/server';
 import { listDocuments, countDocumentsByStatus } from '@/lib/documents/repository';
 import { listJobs, jobSummary } from '@/lib/jobs/service';
@@ -44,10 +43,13 @@ export default async function DashboardOverviewPage() {
         description="Processing health, review workload and usage for this billing period."
         actions={
           <>
-            <ButtonLink href="#upload" variant="secondary" icon={<Upload />}>
+            <ButtonLink href="/dashboard/review" variant="secondary">
+              Review queue{needsReview > 0 ? ` · ${needsReview}` : ''}
+            </ButtonLink>
+            <ButtonLink href="#upload" variant="secondary">
               Upload
             </ButtonLink>
-            <ButtonLink href="/dashboard/documents" iconAfter={<ArrowRight />}>
+            <ButtonLink href="/dashboard/documents" iconAfter={<span aria-hidden="true">↗</span>}>
               All documents
             </ButtonLink>
           </>
@@ -56,46 +58,34 @@ export default async function DashboardOverviewPage() {
 
       <div className={styles.grid4}>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>
-            <FileText size={12} /> Documents
-          </span>
+          <span className={styles.statLabel}>01 / Documents</span>
           <span className={styles.statValue}>{totalDocuments}</span>
           <span className={styles.statMeta}>{active} processing now</span>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>
-            <AlertTriangle size={12} /> Needs review
-          </span>
+          <span className={styles.statLabel}>02 / Needs review</span>
           <span className={styles.statValue}>{needsReview}</span>
           <span className={styles.statMeta}>
-            {needsReview > 0 ? (
-              <Link href="/dashboard/documents?status=needs_review">Open the review queue</Link>
-            ) : (
-              'Nothing waiting'
-            )}
+            <Link href="/dashboard/review">{needsReview > 0 ? 'Open review queue' : 'Review queue is clear'}</Link>
           </span>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>
-            <CheckCircle2 size={12} /> Pages used
-          </span>
+          <span className={styles.statLabel}>03 / Pages used</span>
           <span className={styles.statValue}>
             {usage.usage.pagesUsed}
-            <span style={{ fontSize: 12, color: 'var(--color-faint)', fontWeight: 500 }}> / {usage.plan.monthlyPageLimit}</span>
+            <span className={styles.statValueSub}> / {usage.plan.monthlyPageLimit}</span>
           </span>
           <span className={styles.statMeta}>Resets {formatDate(usage.usage.periodEnd)}</span>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>
-            <Layers size={12} /> Failed jobs
-          </span>
+          <span className={styles.statLabel}>04 / Failed jobs</span>
           <span className={styles.statValue}>{failed}</span>
           <span className={styles.statMeta}>{failed > 0 ? 'Retry from the job list' : 'No failures'}</span>
         </div>
       </div>
 
       <div className={styles.split}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className={styles.stack}>
           <section className={styles.card} id="upload">
             <div className={styles.cardHead}>
               <span className={styles.cardTitle}>Upload documents</span>
@@ -129,7 +119,7 @@ export default async function DashboardOverviewPage() {
           </section>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className={styles.stack}>
           <section className={styles.card}>
             <div className={styles.cardHead}>
               <span className={styles.cardTitle}>This period</span>
@@ -171,23 +161,26 @@ export default async function DashboardOverviewPage() {
           <section className={styles.card}>
             <div className={styles.cardHead}>
               <span className={styles.cardTitle}>Pipeline stages</span>
-              <span className={styles.cardHint}>live status names</span>
+              <span className={styles.cardHint}>live counts</span>
             </div>
             <div className={styles.cardBody}>
               <ul className={styles.timeline}>
                 {[
-                  ['queued', 'Durable job row created'],
-                  ['extracting_text', 'PyMuPDF reads the text layer'],
-                  ['running_ocr', 'OCR only for pages without text'],
-                  ['extracting_fields', 'Schema-constrained extraction'],
-                  ['validating', 'Dates, currency and totals'],
-                  ['detecting_duplicates', 'Checksum and field similarity'],
-                ].map(([stage, copy]) => (
-                  <li key={stage} className={styles.timelineItem}>
-                    <span className={`${styles.timelineDot} ${active > 0 ? styles.timelineDotActive : ''}`} />
+                  { stage: 'queued', label: 'Queued', copy: 'Durable job row created', count: counts.queued ?? 0 },
+                  { stage: 'extracting_text', label: 'Extracting text', copy: 'PyMuPDF reads the text layer', count: counts.extracting_text ?? 0 },
+                  { stage: 'running_ocr', label: 'Running OCR', copy: 'OCR only for pages without text', count: counts.running_ocr ?? 0 },
+                  { stage: 'extracting_fields', label: 'Extracting fields', copy: 'Schema-constrained extraction', count: counts.extracting_fields ?? 0 },
+                  { stage: 'validating', label: 'Validating', copy: 'Dates, currency and totals', count: counts.validating ?? 0 },
+                  { stage: 'detecting_duplicates', label: 'Detecting duplicates', copy: 'Checksum and field similarity', count: counts.detecting_duplicates ?? 0 },
+                ].map((stage) => (
+                  <li key={stage.stage} className={styles.timelineItem}>
+                    <span className={`${styles.timelineDot} ${stage.count > 0 ? styles.timelineDotActive : ''}`} />
                     <div>
-                      <p className={styles.timelineLabel}>{stage.replace(/_/g, ' ')}</p>
-                      <p className={styles.timelineMeta}>{copy}</p>
+                      <p className={styles.timelineLabel}>
+                        {stage.label}
+                        {stage.count > 0 ? ` · ${stage.count}` : ''}
+                      </p>
+                      <p className={styles.timelineMeta}>{stage.copy}</p>
                     </div>
                   </li>
                 ))}

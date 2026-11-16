@@ -1,11 +1,12 @@
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   color: var(--color-ink);
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  font-size: 17px;
+  font-size: 16px;
+  font-weight: 520;
+  letter-spacing: -0.045em;
+  line-height: 1;
 }
 
 .logo:hover {
@@ -16,32 +17,33 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
   background: var(--color-ink);
-  color: #fff;
+  color: var(--color-paper);
   flex: none;
 }
 
 .mark svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
 }
 
 .word {
   line-height: 1;
+  transform: translateY(0.5px);
 }
 
 .inverse {
-  color: #fff;
+  color: var(--color-on-dark);
 }
 
 .inverse:hover {
-  color: #fff;
+  color: var(--color-on-dark);
 }
 
 .inverse .mark {
-  background: #fff;
+  background: var(--color-on-dark);
   color: var(--color-ink);
 }

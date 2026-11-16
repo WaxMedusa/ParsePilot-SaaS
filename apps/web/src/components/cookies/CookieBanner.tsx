@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Check, Cookie, SlidersHorizontal, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { CONSENT_COOKIE, CONSENT_VERSION, OPEN_COOKIE_SETTINGS_EVENT, parseConsent, serializeConsent, type CookiePreferences } from '@/lib/consent';
 import { ensureCsrfToken } from '@/lib/client/csrf';
 import styles from './CookieBanner.module.css';
@@ -85,9 +85,6 @@ export function CookieBanner() {
     <div className={styles.wrap} role="dialog" aria-modal="false" aria-labelledby="cookie-title" aria-describedby="cookie-description">
       <div className={styles.panel}>
         <div className={styles.head}>
-          <span className={styles.icon}>
-            <Cookie size={16} aria-hidden="true" />
-          </span>
           <div className={styles.headText}>
             <h2 id="cookie-title" className={styles.title}>
               {mode === 'summary' ? 'Cookies on ParsePilot' : 'Cookie preferences'}
@@ -110,9 +107,7 @@ export function CookieBanner() {
                 <p className={styles.optionTitle}>Essential</p>
                 <p className={styles.optionBody}>Session, CSRF protection and your cookie choice. These cannot be disabled.</p>
               </div>
-              <span className={styles.alwaysOn}>
-                <Check size={11} /> Always on
-              </span>
+              <span className={styles.alwaysOn}>Always on</span>
             </div>
             <label className={styles.option}>
               <div>
@@ -141,7 +136,7 @@ export function CookieBanner() {
                 Reject optional
               </button>
               <button type="button" className={styles.ghost} onClick={() => setMode('customise')}>
-                <SlidersHorizontal size={13} /> Customise
+                Customise
               </button>
             </>
           ) : (

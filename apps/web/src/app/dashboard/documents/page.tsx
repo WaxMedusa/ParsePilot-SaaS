@@ -3,7 +3,7 @@ import { Upload } from 'lucide-react';
 import { requireWorkspaceAuth } from '@/lib/auth/server';
 import { listDocuments } from '@/lib/documents/repository';
 import { PageHeader } from '@/components/dashboard/PageHeader';
-import { UploadPanel } from '@/components/dashboard/UploadPanel';
+import { UploadDisclosure } from '@/components/dashboard/UploadDisclosure';
 import { DocumentsTable } from '@/components/dashboard/DocumentsTable';
 import { formatDate } from '@/lib/format';
 import styles from '@/components/dashboard/Dashboard.module.css';
@@ -63,15 +63,7 @@ export default async function DocumentsPage({
         }
       />
 
-      <details open className={styles.card} id="upload">
-        <summary className={styles.cardHead} style={{ cursor: 'pointer', listStyle: 'none' }}>
-          <span className={styles.cardTitle}>Add documents</span>
-          <span className={styles.cardHint}>PDF · PNG · JPEG · TIFF · WebP</span>
-        </summary>
-        <div className={styles.cardBody}>
-          <UploadPanel workspaceId={auth.workspace.id} />
-        </div>
-      </details>
+      <UploadDisclosure workspaceId={auth.workspace.id} />
 
       <section className={styles.card}>
         <div className={styles.cardHead}>

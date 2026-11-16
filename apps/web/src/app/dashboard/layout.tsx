@@ -1,4 +1,5 @@
 import { requireServerAuth } from '@/lib/auth/server';
+import { countDocumentsByStatus } from '@/lib/documents/repository';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 
 export const dynamic = 'force-dynamic';
@@ -8,6 +9,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!auth.workspace) {
     return <div style={{ minHeight: '100vh', background: 'var(--color-background)' }}>{children}</div>;
   }
+  const counts = await countDocumentsByStatus(auth.workspace.id);
+
   return (
     <DashboardShell
       user={{ name: auth.user.name, email: auth.user.email }}
@@ -17,6 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         planCode: auth.workspace.planCode,
         role: auth.workspace.role,
       }}
+      reviewCount={counts.needs_review ?? 0}
     >
       {children}
     </DashboardShell>

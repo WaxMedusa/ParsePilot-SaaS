@@ -1,0 +1,140 @@
+.reviewGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(28px, 4vw, 54px);
+  align-items: start;
+}
+
+.previewColumn {
+  min-width: 0;
+  position: sticky;
+  top: 18px;
+}
+
+.sourceNote {
+  margin-top: 12px;
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+  max-width: 58ch;
+}
+
+.dataColumn {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.workspaceSection {
+  border-top: 1px solid var(--color-ink);
+}
+
+.workspaceHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 0 11px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.workspaceKicker {
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.workspaceTitle {
+  margin-top: 6px;
+  font-size: 1.25rem;
+  font-weight: 470;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.workspaceMeta {
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.workspaceIntro {
+  margin: 13px 0 18px;
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.7;
+  max-width: 62ch;
+}
+
+.workspaceFoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  line-height: 1.55;
+  text-transform: uppercase;
+}
+
+.noticeBody {
+  margin-top: 4px;
+}
+
+.noticeBody a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.metadataNote {
+  margin-top: 11px;
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  line-height: 1.65;
+  max-width: 58ch;
+}
+
+@media (max-width: 1180px) {
+  .reviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .previewColumn {
+    position: static;
+  }
+}
+
+@media (max-width: 620px) {
+  .workspaceHead {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .workspaceMeta {
+    padding-top: 0;
+  }
+
+  .workspaceIntro {
+    margin-bottom: 14px;
+  }
+
+  .workspaceFoot {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}

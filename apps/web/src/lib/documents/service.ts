@@ -194,6 +194,37 @@ export async function getDocumentDetail(documentId: string, workspaceId: string)
   };
 }
 
+export async function markDocumentReviewed(input: {
+  documentId: string;
+  workspaceId: string;
+  actorId: string;
+}) {
+  const document = await prisma.document.findFirst({
+    where: { id: input.documentId, workspaceId: input.workspaceId, deletedAt: null },
+    select: { id: true, status: true },
+  });
+  if (!document) throw ApiError.notFound('Document not found');
+  if (document.status !== 'needs_review') {
+    throw ApiError.conflict('Only documents awaiting review can be marked reviewed');
+  }
+
+  const updated = await prisma.document.update({
+    where: { id: document.id },
+    data: { status: 'completed' },
+    select: { id: true, status: true },
+  });
+  await recordAudit({
+    action: 'document.reviewed',
+    workspaceId: input.workspaceId,
+    actorId: input.actorId,
+    targetType: 'document',
+    targetId: document.id,
+    metadata: { previousStatus: document.status },
+  });
+  logger.info('document_reviewed', { documentId: document.id, workspaceId: input.workspaceId });
+  return updated;
+}
+
 export async function updateDocument(input: {
   documentId: string;
   workspaceId: string;
@@ -333,6 +364,20 @@ export async function createDocumentDownloadUrl(input: {
 /** Returns the raw object for the signed file route. */
 export async function readStoredObject(storageKey: string) {
   return getStorage().getObject(storageKey);
+}
+
+/** Authorized bytes for the authenticated in-app document preview. */
+export async function getDocumentPreview(input: { documentId: string; workspaceId: string }) {
+  const document = await prisma.document.findFirst({
+    where: { id: input.documentId, workspaceId: input.workspaceId, deletedAt: null },
+    select: { storageKey: true, originalName: true, mimeType: true },
+  });
+  if (!document) throw ApiError.notFound('Document not found');
+  return {
+    bytes: await readStoredObject(document.storageKey),
+    originalName: document.originalName,
+    mimeType: document.mimeType,
+  };
 }
 
 export async function getDocumentExtractionForExport(documentId: string, workspaceId: string) {

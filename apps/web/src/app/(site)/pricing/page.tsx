@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, Check } from 'lucide-react';
 import { listPublicPlans } from '@/lib/billing/plans';
 import { formatCurrencyCents } from '@/lib/format';
 import { ButtonLink } from '@/components/ui/Button';
@@ -46,6 +45,15 @@ const FAQ = [
   },
 ];
 
+const INCLUDED = [
+  ['Private storage', 'Random object keys, short-lived signed downloads, deletion workflows.'],
+  ['Review queue', 'Confidence scores, arithmetic checks and field-level corrections.'],
+  ['Versioned extractions', 'Reprocessing keeps your manual edits and records a new version.'],
+  ['Duplicate detection', 'Checksum matching plus field-similarity checks within your workspace.'],
+  ['Audit trail', 'Uploads, edits, deletions, downloads and retries recorded with correlation IDs.'],
+  ['Reliable jobs', 'Exponential backoff, heartbeats, dead-letter handling and manual replay.'],
+];
+
 export default async function PricingPage() {
   const plans = await listPublicPlans();
 
@@ -53,66 +61,91 @@ export default async function PricingPage() {
     <div className={styles.page}>
       <section className={styles.hero}>
         <div className="container">
-          <p className="eyebrow">Pricing</p>
-          <h1 className={styles.title}>Priced on pages processed, not people invited.</h1>
-          <p className={styles.lede}>
-            Every plan includes the full extraction pipeline, validation, duplicate detection and the review queue.
-            Limits are enforced in the backend — not hidden in the interface.
-          </p>
+          <div className={styles.heroMeta}>
+            <p className="kicker">Pricing / plans</p>
+            <span>Page volume, not seat count</span>
+          </div>
+          <div className={styles.heroGrid}>
+            <h1 className={styles.title}>Priced on pages processed, not people invited.</h1>
+            <div className={styles.heroCopy}>
+              <p className={styles.lede}>
+                Every plan includes the full extraction pipeline, validation, duplicate detection and the review queue.
+                Limits are enforced in the backend — not hidden in the interface.
+              </p>
+              <Link href="/contact" className={styles.heroLink}>
+                Ask about volume terms <span aria-hidden="true">↗</span>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
       <section className={styles.plansSection}>
         <div className="container">
+          <div className={styles.tableHead} aria-hidden="true">
+            <span>Plan</span>
+            <span>Monthly</span>
+            <span>Pages</span>
+            <span>Max file</span>
+            <span>Members</span>
+            <span />
+          </div>
+
           <div className={styles.plans}>
             {plans.map((plan) => {
               const featured = plan.code === 'starter';
-              const price = plan.priceCents === 0 ? 'Free' : formatCurrencyCents(plan.priceCents, plan.currency);
+              const enterprise = plan.code === 'enterprise';
+              const price = enterprise ? 'Custom' : plan.priceCents === 0 ? 'Free' : formatCurrencyCents(plan.priceCents, plan.currency);
+              const href = enterprise ? '/contact' : `/signup?plan=${plan.code}`;
               return (
                 <article key={plan.code} className={`${styles.plan} ${featured ? styles.planFeatured : ''}`}>
-                  <div className={styles.planHead}>
-                    <h2 className={styles.planName}>{plan.name}</h2>
-                    {featured ? <span className={styles.planTag}>Popular</span> : null}
+                  <div className={styles.planIdentity}>
+                    <div className={styles.planNameRow}>
+                      <h2 className={styles.planName}>{plan.name}</h2>
+                      {featured ? <span className={styles.planTag}>Popular entry point</span> : null}
+                    </div>
+                    <p className={styles.planDescription}>{plan.description}</p>
+                    <ul className={styles.planFeatures}>
+                      {plan.features.map((feature) => (
+                        <li key={feature}>{feature}</li>
+                      ))}
+                    </ul>
                   </div>
-                  <p className={styles.planDescription}>{plan.description}</p>
-                  <p className={styles.price}>
-                    {price}
-                    {plan.priceCents > 0 ? <span className={styles.pricePeriod}> / month</span> : null}
-                  </p>
-                  <dl className={styles.planSpecs}>
-                    <div>
-                      <dt>Monthly pages</dt>
-                      <dd>{plan.monthlyPageLimit.toLocaleString('en-US')}</dd>
-                    </div>
-                    <div>
-                      <dt>Max upload</dt>
-                      <dd>{plan.maxUploadMb} MB</dd>
-                    </div>
-                    <div>
-                      <dt>Workspaces</dt>
-                      <dd>{plan.maxWorkspaces}</dd>
-                    </div>
-                    <div>
-                      <dt>Members</dt>
-                      <dd>{plan.maxMembers}</dd>
-                    </div>
-                  </dl>
-                  <ul className={styles.planFeatures}>
-                    {plan.features.map((feature) => (
-                      <li key={feature}>
-                        <Check size={13} aria-hidden="true" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <ButtonLink
-                    href={`/signup?plan=${plan.code}`}
-                    variant={featured ? 'inverse' : 'secondary'}
-                    block
-                    iconAfter={<ArrowRight />}
-                  >
-                    {plan.priceCents === 0 ? 'Start free' : `Choose ${plan.name}`}
-                  </ButtonLink>
+
+                  <div className={styles.price}>
+                    <strong>{price}</strong>
+                    {plan.priceCents > 0 && !enterprise ? <span>/ month</span> : null}
+                    {enterprise ? <span>annual terms</span> : plan.priceCents === 0 ? <span>no card required</span> : null}
+                  </div>
+
+                  <div className={`${styles.spec} ${styles.specPages}`}>
+                    <span>Monthly pages</span>
+                    <strong>{plan.monthlyPageLimit.toLocaleString('en-US')}</strong>
+                    <small>per month</small>
+                  </div>
+
+                  <div className={`${styles.spec} ${styles.specFile}`}>
+                    <span>Max upload</span>
+                    <strong>{plan.maxUploadMb} MB</strong>
+                    <small>per file</small>
+                  </div>
+
+                  <div className={`${styles.spec} ${styles.specMembers}`}>
+                    <span>Members</span>
+                    <strong>{plan.maxMembers}</strong>
+                    <small>{plan.maxWorkspaces} workspace limit</small>
+                  </div>
+
+                  <div className={styles.action}>
+                    <ButtonLink
+                      href={href}
+                      variant={featured ? 'primary' : 'secondary'}
+                      size="sm"
+                      iconAfter={<span aria-hidden="true">↗</span>}
+                    >
+                      {enterprise ? 'Talk to us' : plan.priceCents === 0 ? 'Start free' : `Choose ${plan.name}`}
+                    </ButtonLink>
+                  </div>
                 </article>
               );
             })}
@@ -128,17 +161,14 @@ export default async function PricingPage() {
 
       <section className={styles.comparison}>
         <div className="container">
-          <h2 className={styles.comparisonTitle}>What every plan includes</h2>
+          <div className={styles.comparisonHead}>
+            <p className="kicker">Included in every plan</p>
+            <h2 className={styles.comparisonTitle}>The product does not change with the price.</h2>
+          </div>
           <div className={styles.compareGrid}>
-            {[
-              ['Private storage', 'Random object keys, short-lived signed downloads, deletion workflows.'],
-              ['Review queue', 'Confidence scores, arithmetic checks and field-level corrections.'],
-              ['Versioned extractions', 'Reprocessing keeps your manual edits and records a new version.'],
-              ['Duplicate detection', 'Checksum matching plus field-similarity checks within your workspace.'],
-              ['Audit trail', 'Uploads, edits, deletions, downloads and retries recorded with correlation IDs.'],
-              ['Reliable jobs', 'Exponential backoff, heartbeats, dead-letter handling and manual replay.'],
-            ].map(([title, body]) => (
+            {INCLUDED.map(([title, body], index) => (
               <div key={title} className={styles.compareItem}>
+                <span className={styles.compareIndex}>{String(index + 1).padStart(2, '0')}</span>
                 <h3>{title}</h3>
                 <p>{body}</p>
               </div>
@@ -149,14 +179,14 @@ export default async function PricingPage() {
 
       <section className={styles.faqSection}>
         <div className={`container ${styles.faqGrid}`}>
-          <div>
-            <p className="eyebrow">Billing questions</p>
+          <div className={styles.faqIntro}>
+            <p className="kicker">Billing questions</p>
             <h2 className={styles.faqTitle}>The details that usually get asked.</h2>
             <p className={styles.faqLede}>
               The billing policy is documented and implemented, not improvised. If something is not covered here, ask us
               before you buy.
             </p>
-            <ButtonLink href="/contact" variant="secondary">
+            <ButtonLink href="/contact" variant="secondary" iconAfter={<span aria-hidden="true">↗</span>}>
               Ask a question
             </ButtonLink>
           </div>

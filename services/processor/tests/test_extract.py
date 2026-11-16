@@ -24,6 +24,7 @@ def test_classify_invoice_and_receipt():
 
 def test_extract_rules_invoice_fields():
     fields = extract_rules(INVOICE_TEXT)
+    assert fields["vendor_name"] == "ACME SUPPLY LTD"
     assert fields["document_number"] == "INV-2026-0042"
     assert fields["issue_date"] == "2026-03-14"
     assert fields["due_date"] == "2026-04-13"
@@ -33,6 +34,30 @@ def test_extract_rules_invoice_fields():
     assert fields["total_amount"] == "1234.50"
     assert fields["payment_terms"].startswith("Net 30")
     assert fields["iban"].startswith("GB33")
+
+
+def test_vendor_heading_is_not_treated_as_vendor_name():
+    text = """INVOICE
+East Repair Inc.
+1912 Harvest Lane
+Invoice # us-001
+Invoice Date: 2026-11-16
+Currency: USD
+Subtotal: 145.00
+Sales Tax 6.25% 9.06
+Total: 154.06
+"""
+    fields = extract_rules(text)
+    assert fields["vendor_name"] == "East Repair Inc"
+    assert fields["vendor_name"] != "INVOICE"
+    assert fields["tax_amount"] == "9.06"
+    assert fields["subtotal"] == "145.00"
+    assert fields["total_amount"] == "154.06"
+
+
+def test_generic_heading_without_a_company_is_not_used_as_vendor():
+    fields = extract_rules("INVOICE\nBill To: Northwind\nTotal: 10.00\n")
+    assert "vendor_name" not in fields
 
 
 def test_extract_returns_payload_without_ai(monkeypatch):

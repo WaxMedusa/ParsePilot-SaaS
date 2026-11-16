@@ -20,24 +20,24 @@ export function UsageChart({ data, limit }: { data: UsagePoint[]; limit: number 
       <div className={styles.chart}>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={data} margin={{ top: 12, right: 8, bottom: 0, left: -18 }} barCategoryGap="28%">
-            <CartesianGrid vertical={false} stroke="#E9EBF1" strokeDasharray="3 3" />
-            <XAxis dataKey="label" tick={{ fontSize: 9.5, fill: '#8B92A2' }} tickLine={false} axisLine={{ stroke: '#E6E9EF' }} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 9.5, fill: '#8B92A2' }} tickLine={false} axisLine={false} allowDecimals={false} width={38} />
+            <CartesianGrid vertical={false} stroke="#d8d4c9" strokeDasharray="2 4" />
+            <XAxis dataKey="label" tick={{ fontSize: 8.5, fill: '#999a90' }} tickLine={false} axisLine={{ stroke: '#d8d4c9' }} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 8.5, fill: '#999a90' }} tickLine={false} axisLine={false} allowDecimals={false} width={34} />
             <Tooltip
-              cursor={{ fill: 'rgba(99, 91, 255, 0.06)' }}
+              cursor={{ fill: 'rgba(98, 107, 86, 0.08)' }}
               contentStyle={{
-                background: '#FFFFFF',
-                border: '1px solid #E6E9EF',
-                borderRadius: 8,
-                fontSize: 11,
-                color: '#171A23',
-                boxShadow: '0 8px 24px rgba(16,19,34,0.08)',
+                background: '#f3f1eb',
+                border: '1px solid #bfbbaf',
+                borderRadius: 0,
+                fontSize: 10,
+                color: '#171816',
+                boxShadow: 'none',
               }}
-              labelStyle={{ fontSize: 10, color: '#6D7484', marginBottom: 2 }}
+              labelStyle={{ fontSize: 8.5, color: '#74766e', marginBottom: 2 }}
               formatter={(value: number) => [`${value} pages`, 'Processed']}
             />
-            <ReferenceLine y={limit} stroke="#C9CDD6" strokeDasharray="4 4" />
-            <Bar dataKey="pages" fill="#635BFF" radius={[2, 2, 0, 0]} maxBarSize={26} />
+            <ReferenceLine y={limit} stroke="#bfbbaf" strokeDasharray="3 3" />
+            <Bar dataKey="pages" fill="#626b56" radius={0} maxBarSize={24} />
           </BarChart>
         </ResponsiveContainer>
       </div>

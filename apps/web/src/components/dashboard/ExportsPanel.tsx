@@ -36,6 +36,12 @@ export function ExportsPanel({
   const [error, setError] = useState<string | null>(null);
   const pollTimer = useRef<number | undefined>(undefined);
 
+  // The dashboard refreshes server data in place; keep the client export list
+  // in sync with that snapshot instead of only refreshing while a job is open.
+  useEffect(() => {
+    setExports(initialExports);
+  }, [initialExports]);
+
   const refresh = useCallback(async () => {
     try {
       const rows = await apiRequest<ExportRow[]>('/api/v1/exports', { workspaceId });
@@ -86,11 +92,72 @@ export function ExportsPanel({
     }
   };
 
+  const downloadLive = async () => {
+    setBusy('live');
+    setError(null);
+    try {
+      const response = await fetch('/api/v1/exports/live', {
+        headers: {
+          accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'x-workspace-id': workspaceId,
+        },
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        let message = 'The live workbook could not be built.';
+        try {
+          const payload = (await response.json()) as { error?: { message?: string } };
+          message = payload.error?.message ?? message;
+        } catch {
+          // The endpoint may have returned a non-JSON failure; use the safe fallback above.
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition') ?? '';
+      const filename = /filename="([^"]+)"/i.exec(disposition)?.[1] ?? 'parsepilot-live.xlsx';
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <section className={styles.card}>
         <div className={styles.cardHead}>
-          <span className={styles.cardTitle}>Create an export</span>
+          <span className={styles.cardTitle}>Live XLSX</span>
+          <span className={styles.cardHint}>always current · no expiry</span>
+        </div>
+        <div className={styles.cardBody}>
+          <p className={styles.sectionBody}>
+            One workbook, built from every completed and needs-review document at the moment you download it. New
+            uploads, processing results and field corrections are included automatically — there is no stale snapshot
+            to regenerate.
+          </p>
+          <div className={styles.actions} style={{ marginTop: 14 }}>
+            <Button variant="secondary" icon={<FileSpreadsheet />} onClick={downloadLive} disabled={busy !== null}>
+              {busy === 'live' ? 'Building workbook…' : 'Download live XLSX'}
+            </Button>
+            <span className={styles.hint}>Updates with the workspace · includes edited values</span>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.cardHead}>
+          <span className={styles.cardTitle}>Create a snapshot export</span>
           <span className={styles.cardHint}>Background job · private file</span>
         </div>
         <div className={styles.cardBody}>
@@ -108,11 +175,13 @@ export function ExportsPanel({
                 icon={<FileSpreadsheet />}
                 onClick={() => create('xlsx')}
                 disabled={busy !== null || !xlsxAllowed}
-                title={xlsxAllowed ? undefined : 'XLSX is not included in the free plan'}
+                title={xlsxAllowed ? undefined : 'Snapshot XLSX is not included in the free plan; live XLSX is available above.'}
               >
-                {busy === 'xlsx' ? 'Queuing…' : 'New XLSX export'}
+                {busy === 'xlsx' ? 'Queuing…' : 'New XLSX snapshot'}
               </Button>
-              {!xlsxAllowed ? <span className={styles.hint}>XLSX is not included in your current plan.</span> : null}
+              {!xlsxAllowed ? (
+                <span className={styles.hint}>Snapshot XLSX is not included in your current plan. Live XLSX is available above.</span>
+              ) : null}
             </div>
           ) : (
             <p className={styles.notice + ' ' + styles.noticeInfo} style={{ marginTop: 12 }}>
@@ -134,7 +203,7 @@ export function ExportsPanel({
               <Download size={16} />
             </span>
             <p className={styles.emptyTitle}>No exports yet</p>
-            <p className={styles.emptyBody}>Create a CSV of your reviewed documents to see the full field set, including corrections.</p>
+            <p className={styles.emptyBody}>Download the live XLSX above for the current data, or create a CSV snapshot with the full field set, including corrections.</p>
           </div>
         ) : (
           <div className={styles.tableWrap}>

@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Pencil, X } from 'lucide-react';
 import { FIELD_BY_KEY, FIELD_DEFINITIONS } from '@/lib/documents/fields';
 import { apiRequest, errorMessage } from '@/lib/client/api';
 import styles from './FieldEditor.module.css';
@@ -103,14 +102,17 @@ export function FieldEditor({
   return (
     <div className={styles.wrap}>
       <div className={styles.topline}>
-        <span className={styles.version}>{version ? `Extraction version ${version}` : 'Latest extraction'}</span>
+        <span className={styles.version}>{version ? `Extraction v${version}` : 'Latest extraction'}</span>
         <span className={styles.hint}>Original values are preserved. Edits are attributed and audited.</span>
       </div>
       {error ? <p className={styles.error}>{error}</p> : null}
 
-      {grouped.map(([group, groupFields]) => (
+      {grouped.map(([group, groupFields], groupIndex) => (
         <div key={group} className={styles.group}>
-          <p className={styles.groupLabel}>{GROUP_LABEL[group] ?? group}</p>
+          <div className={styles.groupHead}>
+            <p className={styles.groupLabel}>{GROUP_LABEL[group] ?? group}</p>
+            <span className={styles.groupCount}>{String(groupIndex + 1).padStart(2, '0')} / {groupFields.length} fields</span>
+          </div>
           <div className={styles.list}>
             {groupFields.map((field) => {
               const definition = FIELD_BY_KEY.get(field.key);
@@ -134,10 +136,10 @@ export function FieldEditor({
                           aria-label={`Value for ${definition?.label ?? field.key}`}
                         />
                         <button type="button" className={styles.saveButton} onClick={() => save(field)} disabled={saving}>
-                          <Check size={12} /> {saving ? 'Saving' : 'Save'}
+                          {saving ? 'Saving' : 'Save'}
                         </button>
-                        <button type="button" className={styles.cancelButton} onClick={() => setEditing(null)} disabled={saving} aria-label="Cancel edit">
-                          <X size={12} />
+                        <button type="button" className={styles.cancelButton} onClick={() => setEditing(null)} disabled={saving}>
+                          Cancel
                         </button>
                       </div>
                     ) : (
@@ -148,7 +150,7 @@ export function FieldEditor({
                         {field.editedValue !== null ? <span className={styles.editedTag}>edited</span> : null}
                         {canEdit ? (
                           <button type="button" className={styles.editButton} onClick={() => startEdit(field)} aria-label={`Edit ${definition?.label ?? field.key}`}>
-                            <Pencil size={11} />
+                            Edit
                           </button>
                         ) : null}
                       </div>

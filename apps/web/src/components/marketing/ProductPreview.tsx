@@ -1,172 +1,132 @@
-import {
-  BarChart3,
-  Check,
-  ChevronDown,
-  Download,
-  FileText,
-  Inbox,
-  Layers,
-  Search,
-  ShieldCheck,
-  AlertTriangle,
-} from 'lucide-react';
 import styles from './ProductPreview.module.css';
 
-const ROWS = [
-  { vendor: 'Meridian Supply Co.', number: 'INV-2041', amount: '$12,480.00', status: 'completed', tone: 'success' },
-  { vendor: 'Atlas Freight GmbH', number: 'INV-8842', amount: '€3,915.40', status: 'needs review', tone: 'warning' },
-  { vendor: 'Northwind Utilities', number: 'UTIL-0925', amount: '$642.18', status: 'completed', tone: 'success' },
-  { vendor: 'Cobalt Studio', number: 'INV-1190', amount: '$4,250.00', status: 'processing', tone: 'primary' },
+const FIELDS = [
+  { label: 'Vendor', value: 'Atlas Freight GmbH', confidence: 97 },
+  { label: 'Invoice number', value: 'INV-8842', confidence: 99 },
+  { label: 'Issue date', value: '2026-10-14', confidence: 95 },
+  { label: 'Subtotal', value: '€3,597.20', confidence: 94 },
+  { label: 'Tax', value: '€318.20', confidence: 62, edited: true },
+  { label: 'Total', value: '€3,915.40', confidence: 99 },
 ];
 
-const FIELDS = [
-  { label: 'Vendor', value: 'Meridian Supply Co.', confidence: 'w98' },
-  { label: 'Invoice number', value: 'INV-2041', confidence: 'w96' },
-  { label: 'Issue date', value: '2026-10-04', confidence: 'w99' },
-  { label: 'Subtotal', value: '$11,780.00', confidence: 'w94' },
-  { label: 'Tax', value: '$700.00', confidence: 'w91' },
-  { label: 'Total', value: '$12,480.00', confidence: 'w99' },
+const LINES = [
+  { label: 'Freight forwarding · 12 consignments', value: '3,120.00' },
+  { label: 'Customs documentation', value: '477.20' },
 ];
 
 export function ProductPreview() {
   return (
-    <div className={styles.stage} aria-label="Preview of the ParsePilot document workspace">
-      <div className={styles.frame}>
-        <div className={styles.frameBar}>
-          <div className={styles.frameBrand}>
-            <span className={styles.frameMark}>P</span>
-            <span className={styles.frameWorkspace}>Northwind Finance</span>
-            <ChevronDown size={13} className={styles.chevron} aria-hidden="true" />
-          </div>
-          <div className={styles.frameSearch}>
-            <Search size={13} aria-hidden="true" />
-            <span>Search vendor, number, amount</span>
-          </div>
-          <div className={styles.frameUser} aria-hidden="true">
-            <span>MK</span>
-          </div>
+    <div
+      className={styles.stage}
+      role="img"
+      aria-label="Illustrative ParsePilot workspace showing a PDF freight invoice and the extracted fields beside it. The tax field is marked as edited and the document is waiting for review."
+    >
+      <div aria-hidden="true">
+        <div className={styles.stageMeta}>
+          <span>Workspace / documents / INV-8842</span>
+          <span className={styles.liveMark}>Live pipeline</span>
         </div>
 
-        <div className={styles.frameBody}>
-          <div className={styles.rail} aria-hidden="true">
-            <div className={styles.railItems}>
-              <span className={`${styles.railItem} ${styles.railActive}`}>
-                <Inbox size={14} />
-                Documents
-              </span>
-              <span className={styles.railItem}>
-                <Layers size={14} />
-                Jobs
-                <span className={styles.railCount}>2</span>
-              </span>
-              <span className={styles.railItem}>
-                <Download size={14} />
-                Exports
-              </span>
-              <span className={styles.railItem}>
-                <BarChart3 size={14} />
-                Usage
-              </span>
+        <div className={styles.composition}>
+          <div className={styles.document}>
+            <div className={styles.docHead}>
+              <span>Atlas Freight GmbH</span>
+              <span>PDF · 02</span>
             </div>
-            <span className={styles.railItem}>
-              <ShieldCheck size={14} />
-              Privacy
-            </span>
-          </div>
-
-          <div className={styles.main}>
-            <div className={styles.mainHead}>
+            <div className={styles.docRule} />
+            <div className={styles.docTitleRow}>
+              <p className={styles.docTitle}>Invoice</p>
+              <div className={styles.docNumber}>
+                <span>Invoice no.</span>
+                <strong>INV-8842</strong>
+              </div>
+            </div>
+            <div className={styles.docParties}>
               <div>
-                <h3 className={styles.mainTitle}>Documents</h3>
-                <p className={styles.mainMeta}>248 processed · 6 awaiting review</p>
+                <span>Billed to</span>
+                <p>Northwind Finance<br />14 Harbour Street<br />Rotterdam, NL</p>
               </div>
-              <span className={styles.uploadPill}>Upload</span>
+              <div>
+                <span>Issued</span>
+                <p>14 October 2026<br />Due 14 November 2026</p>
+              </div>
             </div>
-
-            <div className={styles.filters} aria-hidden="true">
-              <span className={styles.filterActive}>All</span>
-              <span className={styles.filter}>Needs review</span>
-              <span className={styles.filter}>Failed</span>
-              <span className={styles.filterSpacer} />
-              <span className={styles.filterMeta}>Updated 2m ago</span>
-            </div>
-
-            <div className={styles.table} role="presentation">
-              <div className={styles.tableHead}>
-                <span>Vendor</span>
+            <div className={styles.lineItems}>
+              <div className={styles.lineHead}>
+                <span>Description</span>
                 <span>Amount</span>
-                <span>Status</span>
               </div>
-              {ROWS.map((row) => (
-                <div key={row.number} className={styles.tableRow}>
-                  <span className={styles.vendorCell}>
-                    <span className={styles.fileGlyph}>
-                      <FileText size={13} />
-                    </span>
-                    <span className={styles.vendorText}>
-                      <span className={styles.vendorName}>{row.vendor}</span>
-                      <span className={styles.vendorNumber}>{row.number}</span>
-                    </span>
-                  </span>
-                  <span className={`${styles.amount} mono`}>{row.amount}</span>
-                  <span className={`${styles.status} ${styles[row.tone]}`}>{row.status}</span>
+              {LINES.map((line) => (
+                <div key={line.label} className={styles.line}>
+                  <span>{line.label}</span>
+                  <span>{line.value}</span>
                 </div>
               ))}
             </div>
+            <div className={styles.totals}>
+              <div>
+                <span>Subtotal</span>
+                <span>3,597.20</span>
+              </div>
+              <div>
+                <span>VAT</span>
+                <span>318.20</span>
+              </div>
+              <div className={styles.total}>
+                <span>Total EUR</span>
+                <span>3,915.40</span>
+              </div>
+            </div>
+            <div className={styles.docFoot}>
+              <span>Payment within 30 days</span>
+              <span>Page 1 / 2</span>
+            </div>
+            <span className={styles.docTab}>SOURCE</span>
           </div>
 
-          <div className={styles.detail}>
-            <div className={styles.detailHead}>
-              <div>
-                <p className={styles.detailEyebrow}>Extraction · v2</p>
-                <h4 className={styles.detailTitle}>INV-2041.pdf</h4>
-              </div>
-              <span className={styles.detailCheck}>
-                <Check size={12} />
-              </span>
+          <div className={styles.extraction}>
+            <div className={styles.exHead}>
+              <span>Extraction / v03</span>
+              <span className={styles.reviewStatus}><i /> Needs review</span>
             </div>
+            <p className={styles.exTitle}>INV-8842 · freight invoice</p>
+
             <div className={styles.fieldList}>
               {FIELDS.map((field) => (
-                <div key={field.label} className={styles.field}>
-                  <span className={styles.fieldLabel}>{field.label}</span>
-                  <span className={styles.fieldRow}>
-                    <span className={styles.fieldValue}>{field.value}</span>
-                    <span className={styles.confidence} aria-hidden="true">
-                      <span className={`${styles.confidenceFill} ${styles[field.confidence]}`} />
+                <div key={field.label} className={`${styles.field} ${field.edited ? styles.fieldEdited : ''}`}>
+                  <div className={styles.fieldTop}>
+                    <span className={styles.fieldLabel}>{field.label}</span>
+                    <span className={styles.confidence}>{field.confidence}%</span>
+                  </div>
+                  <div className={styles.valueRow}>
+                    <span className={styles.value}>{field.value}</span>
+                    <span className={styles.meter}>
+                      <i style={{ width: `${field.confidence}%` }} />
                     </span>
-                  </span>
+                  </div>
+                  {field.edited ? <span className={styles.editMark}>Corrected by M. Keller</span> : null}
                 </div>
               ))}
             </div>
-            <div className={styles.detailFoot}>
-              <span className={styles.detailFootItem}>
-                <Check size={12} /> Arithmetic validated
-              </span>
-              <span className={styles.detailFootItem}>4.2s</span>
+
+            <div className={styles.validation}>
+              <span className={styles.validationLabel}>Arithmetic check</span>
+              <span className={styles.validationValue}>Balanced</span>
+              <span className={styles.validationMath}>3,597.20 + 318.20 = 3,915.40</span>
+            </div>
+
+            <div className={styles.exFoot}>
+              <span>2 fields to confirm</span>
+              <span className={styles.exAction}>Review queue <b>↗</b></span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className={styles.floatCard}>
-        <span className={styles.floatIcon}>
-          <Check size={13} />
-        </span>
-        <div className={styles.floatText}>
-          <strong>Extraction complete</strong>
-          <span>6 fields · 3 pages · queued export ready</span>
+        <div className={styles.stageFoot}>
+          <span>Private object storage</span>
+          <span>Version history preserved</span>
+          <span>Export ready after review</span>
         </div>
-      </div>
-
-      <div className={styles.reviewCard}>
-        <span className={styles.reviewIcon}>
-          <AlertTriangle size={13} />
-        </span>
-        <div className={styles.floatText}>
-          <strong>1 field needs review</strong>
-          <span>Tax total differs from subtotal + tax</span>
-        </div>
-        <span className={styles.reviewAction}>Review</span>
       </div>
     </div>
   );

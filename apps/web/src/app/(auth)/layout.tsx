@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Check } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import styles from './AuthLayout.module.css';
 
@@ -20,15 +19,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             of every correction.
           </p>
           <ul className={styles.asideList}>
-            <li>
-              <Check size={13} /> Native PDF text first, OCR only when needed
-            </li>
-            <li>
-              <Check size={13} /> Private storage with short-lived signed links
-            </li>
-            <li>
-              <Check size={13} /> CSV and XLSX exports from reviewed data
-            </li>
+            <li>Native PDF text first, OCR only when needed</li>
+            <li>Private storage with short-lived signed links</li>
+            <li>CSV and XLSX exports from reviewed data</li>
           </ul>
         </div>
         <div className={styles.asideFoot}>
@@ -47,7 +40,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
         <div className={styles.formWrap}>{children}</div>
         <div className={styles.mainFoot}>
-          <Link href="/">← Back to parsepilot.com</Link>
+          <Link href="/">← Back to the public site</Link>
           <span>Need help? See the contact page.</span>
         </div>
       </div>

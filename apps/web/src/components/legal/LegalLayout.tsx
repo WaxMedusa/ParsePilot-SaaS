@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { CheckCircle2, Download, FileWarning, Mail, Printer } from 'lucide-react';
+import { CheckCircle2, Download, FileWarning, Mail } from 'lucide-react';
 import type { LegalDocument } from '@/content/legal/types';
 import { legalConfig, hasUnresolvedLegalPlaceholders, listOutstandingPlaceholders } from '@/config/legal';
 import { LEGAL_PAGES } from '@/content/legal';
 import { CookieSettingsButton } from '@/components/cookies/CookieSettingsButton';
+import { LegalPrintButton } from './LegalPrintButton';
 import styles from './LegalLayout.module.css';
 
 function PlaceholderText({ text }: { text: string }) {
@@ -71,7 +72,7 @@ export function LegalLayout({ document }: { document: LegalDocument }) {
           </div>
         </aside>
 
-        <main className={styles.main}>
+        <div className={styles.main}>
           <header className={styles.header}>
             <p className={styles.breadcrumb}>
               <Link href="/">Home</Link> <span aria-hidden="true">/</span> Legal
@@ -95,9 +96,7 @@ export function LegalLayout({ document }: { document: LegalDocument }) {
               </div>
             </dl>
             <div className={styles.actions}>
-              <a href={`/${document.slug}`} className={styles.printButton} onClick={undefined}>
-                <Printer size={13} /> Print / save as PDF
-              </a>
+              <LegalPrintButton />
               <CookieSettingsButton variant="link" />
             </div>
           </header>
@@ -275,7 +274,7 @@ export function LegalLayout({ document }: { document: LegalDocument }) {
               </a>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );

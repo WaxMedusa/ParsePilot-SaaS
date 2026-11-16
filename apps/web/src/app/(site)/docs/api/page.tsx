@@ -36,7 +36,7 @@ export default function ApiDocsPage() {
       <header className={styles.hero}>
         <p className={styles.eyebrow}>Developers</p>
         <h1 className={styles.title}>REST API reference</h1>
-        <p className={styles.lede}>{spec.info.description}</p>
+        <p className={styles.lede}>{spec.info.description?.replace(/`/g, '')}</p>
         <div className={styles.heroMeta}>
           <span className={styles.chip}>OpenAPI {spec.info.version}</span>
           <span className={styles.chip}>Base path /api/v1</span>

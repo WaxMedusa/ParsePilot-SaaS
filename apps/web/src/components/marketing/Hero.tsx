@@ -1,62 +1,77 @@
-import { ArrowRight, Check } from 'lucide-react';
+import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/Button';
 import { ProductPreview } from './ProductPreview';
 import styles from './Hero.module.css';
 
-const PROOF_POINTS = ['No credit card required', 'Private object storage', 'Delete documents anytime'];
+const PROOF = [
+  {
+    index: '01',
+    title: 'Native text first',
+    body: 'Read the PDF text layer. OCR only on pages that genuinely need it.',
+  },
+  {
+    index: '02',
+    title: 'Built for review',
+    body: 'Confidence, corrections and arithmetic checks before anything is exported.',
+  },
+  {
+    index: '03',
+    title: 'Auditable by design',
+    body: 'Versioned extractions, attributed edits and a durable processing record.',
+  },
+];
 
 export function Hero() {
   return (
     <section className={styles.hero}>
       <div className={`container ${styles.inner}`}>
+        <div className={styles.meta}>
+          <p className="kicker">Document intelligence / 01</p>
+          <p className={styles.metaNote}>For finance and operations teams</p>
+        </div>
+
         <div className={styles.copy}>
-          <p className="eyebrow">Document intelligence for finance teams</p>
           <h1 className={styles.headline}>
-            Turn invoices into
-            <br />
-            data your team
-            <br />
-            can <span className={styles.accent}>trust.</span>
+            <span>Turn invoices</span>
+            <span>into data your team</span>
+            <span>
+              can <em className="serif">trust.</em>
+            </span>
           </h1>
           <p className={styles.description}>
             ParsePilot reads native PDFs and scans, extracts line-item detail, validates the arithmetic, and routes
-            anything uncertain to a human review queue. Every correction is versioned, and every value is traceable back
-            to the source document.
+            anything uncertain to a human review queue. Every correction is versioned, and every value is traceable
+            back to the source document.
           </p>
           <div className={styles.actions}>
-            <ButtonLink href="/signup" size="lg" iconAfter={<ArrowRight />}>
+            <ButtonLink href="/signup" size="lg" iconAfter={<span aria-hidden="true">↗</span>}>
               Start free — 100 pages
             </ButtonLink>
-            <ButtonLink href="/#pipeline" variant="secondary" size="lg">
-              See how it works
-            </ButtonLink>
+            <Link href="/#pipeline" className={styles.textLink}>
+              See the pipeline <span aria-hidden="true">↓</span>
+            </Link>
           </div>
-          <ul className={styles.proof}>
-            {PROOF_POINTS.map((point) => (
-              <li key={point} className={styles.proofItem}>
-                <Check size={13} aria-hidden="true" />
-                {point}
-              </li>
-            ))}
-          </ul>
-          <dl className={styles.metrics}>
-            <div className={styles.metric}>
-              <dt>Review workflow</dt>
-              <dd>Field-level confidence and conflict checks before export</dd>
-            </div>
-            <div className={styles.metricDivider} aria-hidden="true" />
-            <div className={styles.metric}>
-              <dt>Built for audits</dt>
-              <dd>Extraction versions, edit history and correlation IDs on every job</dd>
-            </div>
-          </dl>
+          <p className={styles.finePrint}>No credit card. Private storage. Delete documents at any time.</p>
         </div>
+
         <div className={styles.visual}>
           <ProductPreview />
-          <p className={styles.caption}>
-            <span className={styles.captionDot} aria-hidden="true" />
-            Illustrative interface. Data shown is synthetic.
-          </p>
+          <div className={styles.caption}>
+            <span>Illustrative workspace</span>
+            <span>Synthetic document data</span>
+          </div>
+        </div>
+
+        <div className={styles.proof}>
+          {PROOF.map((item) => (
+            <div key={item.index} className={styles.proofItem}>
+              <span className={styles.proofIndex}>{item.index}</span>
+              <div>
+                <p className={styles.proofTitle}>{item.title}</p>
+                <p className={styles.proofBody}>{item.body}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

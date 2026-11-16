@@ -31,22 +31,22 @@ export default async function UsagePage() {
 
       <div className={styles.grid4}>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>Pages used</span>
+          <span className={styles.statLabel}>01 / Pages used</span>
           <span className={styles.statValue}>{usage.usage.pagesUsed}</span>
           <span className={styles.statMeta}>of {usage.plan.monthlyPageLimit} this period</span>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>Remaining</span>
+          <span className={styles.statLabel}>02 / Remaining</span>
           <span className={styles.statValue}>{usage.usage.pagesRemaining}</span>
           <span className={styles.statMeta}>resets {formatDate(usage.usage.periodEnd)}</span>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>Documents processed</span>
+          <span className={styles.statLabel}>03 / Documents processed</span>
           <span className={styles.statValue}>{usage.usage.documentsProcessed}</span>
           <span className={styles.statMeta}>accepted jobs this period</span>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>Export rows</span>
+          <span className={styles.statLabel}>04 / Export rows</span>
           <span className={styles.statValue}>{usage.usage.exportRows}</span>
           <span className={styles.statMeta}>audited, not page-billed</span>
         </div>

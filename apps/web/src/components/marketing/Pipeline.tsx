@@ -13,23 +13,32 @@ export function Pipeline() {
   return (
     <section className={styles.section} id="pipeline">
       <div className="container">
-        <div className={styles.header}>
-          <p className="eyebrow">The processing pipeline</p>
-          <h2 className={styles.heading}>Six stages. Every one of them observable.</h2>
-          <p className={styles.lede}>
-            Status strings are shared by the web application, the worker and the API. That means the timeline your team
-            sees is the actual job state, not a progress animation.
-          </p>
-        </div>
+        <header className={styles.header}>
+          <div className={styles.headerTop}>
+            <p className={`kicker ${styles.kicker}`}>04 / Processing pipeline</p>
+            <span className={styles.headerNote}>Observable by default</span>
+          </div>
+          <div className={styles.headerGrid}>
+            <h2 className={styles.heading}>
+              Six stages.
+              <br />
+              <em className="serif">Every one observable.</em>
+            </h2>
+            <p className={styles.lede}>
+              Status strings are shared by the web application, the worker and the API. That means the timeline your
+              team sees is the actual job state, not a progress animation.
+            </p>
+          </div>
+        </header>
 
         <ol className={styles.track}>
           {STEPS.map((step, index) => (
             <li key={step.code} className={styles.step}>
-              <div className={styles.markerRow}>
-                <span className={styles.marker}>{index + 1}</span>
-                <span className={styles.connector} aria-hidden="true" />
+              <div className={styles.stepTop}>
+                <span className={styles.number}>{String(index + 1).padStart(2, '0')}</span>
+                <code className={styles.code}>{step.code}</code>
               </div>
-              <code className={styles.code}>{step.code}</code>
+              <div className={styles.stepLine} aria-hidden="true" />
               <h3 className={styles.title}>{step.title}</h3>
               <p className={styles.body}>{step.body}</p>
             </li>

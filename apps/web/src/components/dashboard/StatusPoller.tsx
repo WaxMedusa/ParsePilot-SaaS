@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/client/api';
 import styles from './StatusPoller.module.css';
 
@@ -73,7 +72,7 @@ export function StatusPoller({ documentId, workspaceId, initialStatus }: { docum
 
   return (
     <div className={styles.strip} role="status" aria-live="polite">
-      <Loader2 size={13} className={styles.spinner} aria-hidden="true" />
+      <span className={styles.pulse} aria-hidden="true" />
       <span className={styles.label}>{STAGE_LABEL[status] ?? status.replace(/_/g, ' ')}</span>
       <span className={styles.meta}>
         {attempts !== null ? `attempt ${attempts}` : 'worker queued'} · updates automatically

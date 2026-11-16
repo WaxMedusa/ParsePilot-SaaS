@@ -1,25 +1,25 @@
-import { ArrowRight, FileKey2, KeyRound, LockKeyhole, ScrollText } from 'lucide-react';
+import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/Button';
 import styles from './TrustSection.module.css';
 
 const CONTROLS = [
   {
-    icon: LockKeyhole,
+    index: '01',
     title: 'Private by default',
     body: 'No public buckets, no permanent links. Documents are streamed through short-lived signed URLs after an authorization check.',
   },
   {
-    icon: KeyRound,
+    index: '02',
     title: 'Sessions, not shared secrets',
     body: 'Passwords are hashed with scrypt. Sessions are opaque tokens stored as hashes, revocable per device and cleared by password reset.',
   },
   {
-    icon: FileKey2,
+    index: '03',
     title: 'Tenant isolation in every query',
     body: 'Document, job, export and billing reads are filtered by workspace membership. A workspace id from the client is verified, never trusted.',
   },
   {
-    icon: ScrollText,
+    index: '04',
     title: 'Audit trail for sensitive actions',
     body: 'Uploads, edits, deletions, downloads, retries and billing events are recorded with correlation IDs for investigation.',
   },
@@ -27,41 +27,40 @@ const CONTROLS = [
 
 export function TrustSection() {
   return (
-    <section className={styles.section}>
-      <div className={`container ${styles.inner}`}>
+    <section className={styles.section} id="security">
+      <div className={`container ${styles.grid}`}>
         <div className={styles.copy}>
-          <p className={styles.eyebrow}>Security and privacy</p>
+          <p className={`kicker ${styles.kicker}`}>07 / Security and privacy</p>
           <h2 className={styles.heading}>
             Document data is sensitive.
             <br />
-            We treat it that way.
+            <em className="serif">We treat it that way.</em>
           </h2>
           <p className={styles.body}>
             ParsePilot handles invoices, vendor records and payment details. The security page describes exactly what is
             implemented today — including what is not. There are no invented certifications on this site.
           </p>
           <div className={styles.actions}>
-            <ButtonLink href="/security" variant="inverse" iconAfter={<ArrowRight />}>
+            <ButtonLink href="/security" variant="inverse" iconAfter={<span aria-hidden="true">↗</span>}>
               Read the security page
             </ButtonLink>
-            <ButtonLink href="/subprocessors" variant="ghost" className={styles.ghost}>
+            <Link href="/subprocessors" className={styles.textLink}>
               See subprocessors
-            </ButtonLink>
+            </Link>
           </div>
+          <p className={styles.note}>No badges. No unearned claims. Just the controls we can point to.</p>
         </div>
-        <div className={styles.grid}>
-          {CONTROLS.map((control) => {
-            const Icon = control.icon;
-            return (
-              <div key={control.title} className={styles.control}>
-                <span className={styles.icon}>
-                  <Icon size={16} aria-hidden="true" />
-                </span>
+
+        <div className={styles.controls}>
+          {CONTROLS.map((control) => (
+            <article key={control.index} className={styles.control}>
+              <span className={styles.index}>{control.index}</span>
+              <div>
                 <h3 className={styles.controlTitle}>{control.title}</h3>
                 <p className={styles.controlBody}>{control.body}</p>
               </div>
-            );
-          })}
+            </article>
+          ))}
         </div>
       </div>
     </section>

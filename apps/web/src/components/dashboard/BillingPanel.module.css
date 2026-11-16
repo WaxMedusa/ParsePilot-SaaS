@@ -1,22 +1,25 @@
 .currentPlan {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .currentName {
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
   color: var(--color-ink);
+  font-size: 1.7rem;
+  font-weight: 450;
+  letter-spacing: -0.05em;
+  line-height: 1;
 }
 
 .currentMeta {
-  font-size: 10.5px;
   color: var(--color-faint);
   font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
 }
 
 .policy {
@@ -29,19 +32,19 @@
 .policy li {
   position: relative;
   padding-left: 14px;
-  font-size: 11px;
-  line-height: 1.6;
   color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.65;
 }
 
 .policy li::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 2px;
   top: 7px;
-  width: 4px;
-  height: 4px;
-  border-radius: 1px;
+  width: 3px;
+  height: 3px;
+  border-radius: 0;
   background: var(--color-primary);
 }
 
@@ -49,64 +52,75 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
 }
 
 .planActive {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary) inset;
+  border-top: 2px solid var(--color-primary);
+  box-shadow: none;
 }
 
 .planHead {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
 .planName {
-  font-size: 13px;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
 }
 
 .planDescription {
-  font-size: 10.5px;
   color: var(--color-muted);
-  line-height: 1.55;
+  font-size: 9.5px;
+  line-height: 1.6;
   min-height: 30px;
 }
 
 .planPrice {
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
   color: var(--color-ink);
+  font-size: 1.8rem;
+  font-weight: 450;
+  letter-spacing: -0.055em;
   line-height: 1;
 }
 
 .planPeriod {
-  font-size: 10px;
-  font-weight: 500;
   color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 400;
   letter-spacing: 0;
 }
 
 .planSpecs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 4px 10px;
+  color: var(--color-faint);
   font-family: var(--font-mono);
-  font-size: 9.5px;
-  color: var(--color-muted);
+  font-size: 8px;
+  line-height: 1.5;
 }
 
 .planSpecs span {
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
-  padding: 2px 6px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.planSpecs span + span::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--color-border-strong);
 }
 
 .planFeatures {
@@ -116,23 +130,25 @@
   gap: 5px;
   flex: 1;
   margin-bottom: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
 }
 
 .planFeatures li {
-  font-size: 10.5px;
-  line-height: 1.5;
-  color: var(--color-text-soft);
-  padding-left: 11px;
   position: relative;
+  padding-left: 11px;
+  color: var(--color-text-soft);
+  font-size: 9.5px;
+  line-height: 1.55;
 }
 
 .planFeatures li::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 0;
   top: 6px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 0;
   background: var(--color-success);
 }

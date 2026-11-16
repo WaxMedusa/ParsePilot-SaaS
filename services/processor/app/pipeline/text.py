@@ -120,7 +120,16 @@ def extract_text(data: bytes, mime_type: str, on_ocr: Callable[[], None] | None 
         try:
             image = Image.open(io.BytesIO(data))
             image.load()
-            text = pytesseract.image_to_string(image, lang="eng")
+            # Small receipt/invoice images are common. Upscaling before OCR
+            # makes the date and tax columns legible without affecting large
+            # scans; grayscale also removes palette noise from template images.
+            if image.width < 1_200:
+                scale = min(2.5, 1_600 / max(1, image.width))
+                image = image.resize(
+                    (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
+                    Image.Resampling.LANCZOS,
+                )
+            text = pytesseract.image_to_string(image.convert("L"), lang="eng")
         except Exception as error:  # noqa: BLE001
             raise PipelineError(
                 "ocr_unavailable",
