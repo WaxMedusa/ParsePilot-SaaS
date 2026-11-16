@@ -3,14 +3,12 @@
  * required legal details are still placeholders: shipping unresolved legal
  * pages would misrepresent the business and its data practices.
  *
- * Next.js runs this hook in both the Node.js and Edge runtimes. It must never
- * throw in Edge: a throwing instrumentation hook is included in the routing
- * middleware bundle, and on Vercel that surfaces as MIDDLEWARE_INVOCATION_FAILED
- * for every route, including the public marketing site. Vercel preview
- * deployments are review environments, not commercial launches, so they render
- * the draft legal pages. A production deployment still refuses to start until
- * the legal details are complete, unless LEGAL_GATE_MODE=warn is explicitly set
- * for a non-public demonstration.
+ * Next.js can run this hook in both the Node.js and Edge runtimes. It must
+ * never throw in Edge: only the Node instance enforces the legal gate. Vercel
+ * preview deployments are review environments, not commercial launches, so
+ * they render the draft legal pages. A production deployment still refuses to
+ * start until the legal details are complete, unless LEGAL_GATE_MODE=warn is
+ * explicitly set for a non-public demonstration.
  */
 export async function register() {
   if (process.env.NODE_ENV !== 'production') return;

@@ -1,7 +1,11 @@
-import { timingSafeEqual } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { CSRF_COOKIE } from './session';
 import { ApiError } from '../http/errors';
+
+export function generateCsrfToken(): string {
+  return randomBytes(32).toString('base64url');
+}
 
 export function constantTimeEquals(a: string, b: string): boolean {
   const bufA = Buffer.from(a);

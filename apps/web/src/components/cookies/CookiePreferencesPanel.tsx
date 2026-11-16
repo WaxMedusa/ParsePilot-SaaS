@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { CONSENT_COOKIE, CONSENT_VERSION, OPEN_COOKIE_SETTINGS_EVENT, parseConsent, serializeConsent, type CookiePreferences } from '@/lib/consent';
+import { ensureCsrfToken } from '@/lib/client/csrf';
 import styles from './CookieBanner.module.css';
 
 function readCookie(name: string): string | null {
@@ -29,7 +30,7 @@ export function CookiePreferencesPanel() {
     setSaving(true);
     document.cookie = `${CONSENT_COOKIE}=${serializeConsent(preferences)}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     try {
-      const csrf = readCookie('pp_csrf');
+      const csrf = await ensureCsrfToken();
       await fetch('/api/v1/privacy/consent', {
         method: 'POST',
         headers: { 'content-type': 'application/json', ...(csrf ? { 'x-csrf-token': csrf } : {}) },

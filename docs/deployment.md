@@ -45,6 +45,10 @@ The root `vercel.json` deploys both services in one Vercel project (Services is 
 Import the repository at the **root**, not `apps/web`, so Vercel can read `vercel.json`. Vercel builds each service
 separately and installs the npm workspace from the root lockfile. Node.js must be 20.11 or newer.
 
+Vercel Services does not support Edge Functions. This app therefore has no Edge middleware: the CSRF cookie is issued
+by `GET /api/v1/auth/csrf` and bootstrapped in the browser, while the dashboard layout enforces authentication. Do not
+reintroduce `src/middleware.ts` or an `export const runtime = 'edge'` route in the `web` service.
+
 Environment variables are shared by both services:
 
 | Variable | Notes |

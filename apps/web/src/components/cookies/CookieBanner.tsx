@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Check, Cookie, SlidersHorizontal, X } from 'lucide-react';
 import { CONSENT_COOKIE, CONSENT_VERSION, OPEN_COOKIE_SETTINGS_EVENT, parseConsent, serializeConsent, type CookiePreferences } from '@/lib/consent';
+import { ensureCsrfToken } from '@/lib/client/csrf';
 import styles from './CookieBanner.module.css';
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -53,7 +54,7 @@ export function CookieBanner() {
       setSaving(true);
       document.cookie = `${CONSENT_COOKIE}=${serializeConsent(preferences)}; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
       try {
-        const csrf = readCookie('pp_csrf');
+        const csrf = await ensureCsrfToken();
         await fetch('/api/v1/privacy/consent', {
           method: 'POST',
           headers: {

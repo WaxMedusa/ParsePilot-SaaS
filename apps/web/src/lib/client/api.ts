@@ -1,3 +1,5 @@
+import { ensureCsrfToken } from './csrf';
+
 export class ApiClientError extends Error {
   readonly code: string;
   readonly status: number;
@@ -12,12 +14,6 @@ export class ApiClientError extends Error {
     this.details = options.details;
     this.requestId = options.requestId;
   }
-}
-
-function readCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.split('; ').find((entry) => entry.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
 }
 
 export type ApiRequestOptions = {
@@ -45,7 +41,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
 
   if (method !== 'GET') {
-    const csrf = readCookie('pp_csrf');
+    const csrf = await ensureCsrfToken();
     if (csrf) headers['x-csrf-token'] = csrf;
   }
   if (options.workspaceId) headers['x-workspace-id'] = options.workspaceId;
