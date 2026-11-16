@@ -16,7 +16,8 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       <p className={styles.eyebrow}>Start free</p>
       <h1 className={styles.title}>Create your workspace</h1>
       <p className={styles.lede}>
-        The free plan includes 100 pages per month, private storage and the full review workflow. No card required.
+        Continue with Google or create an email account. The free plan includes 100 pages per month, private storage and
+        the full review workflow. No card required.
       </p>
       <SignupForm plan={params.plan} />
     </div>

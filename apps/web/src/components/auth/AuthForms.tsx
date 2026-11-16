@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { apiRequest, errorMessage } from '@/lib/client/api';
+import { GoogleAuthButton } from './GoogleAuthButton';
 import styles from './AuthForms.module.css';
 
 function ErrorBox({ message }: { message: string | null }) {
@@ -38,6 +39,8 @@ export function LoginForm({ next }: { next?: string }) {
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
       <ErrorBox message={error} />
+      <GoogleAuthButton next={next} />
+      <div className={styles.divider}>or use email and password</div>
       <label className={styles.field}>
         <span className={styles.label}>Email</span>
         <input
@@ -114,6 +117,8 @@ export function SignupForm({ plan }: { plan?: string }) {
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
       <ErrorBox message={error} />
+      <GoogleAuthButton next={plan ? `/dashboard/settings/billing?plan=${encodeURIComponent(plan)}` : '/dashboard'} />
+      <div className={styles.divider}>or create an account with email</div>
       <label className={styles.field}>
         <span className={styles.label}>Your name</span>
         <input

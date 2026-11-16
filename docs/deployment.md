@@ -60,6 +60,7 @@ Environment variables are shared by both services:
 | `REDIS_URL` | Required for rate limiting and for handing jobs to the worker. |
 | `AI_API_KEY` / `AI_*` | Optional; without a key the deterministic extraction rules are used. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Only when billing is enabled. |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL and publishable/anon key for Google sign-in. Never use `service_role` here. |
 
 The FastAPI service only enqueues work. The long-running RQ **worker** and **scheduler** are not services; run them
 as Vercel Daemons (containers) or on any container host. They need `REDIS_URL`, `INTERNAL_SERVICE_TOKEN` and a
@@ -74,6 +75,31 @@ DATABASE_URL='postgresql://...' npx prisma migrate deploy --schema apps/web/pris
 
 Seed the public plans once; the marketing pricing section falls back to the catalogue defaults when the database is
 unavailable, but checkout needs the seeded rows.
+
+### Supabase Auth (Google sign-in)
+
+Supabase is the Google identity broker; ParsePilot still owns local users, workspaces, permissions and sessions. The
+browser completes the Google handshake with Supabase, then posts the Supabase access token to
+`/api/v1/auth/supabase`. The server verifies that token with Supabase, requires a confirmed email, finds or creates the
+local user, and issues the normal `pp_session` cookie. Existing email/password accounts keep working and are linked by
+their verified email on first Google sign-in.
+
+Set these public values in Vercel and locally (they are safe to expose):
+
+- `NEXT_PUBLIC_SUPABASE_URL` — `https://<project-ref>.supabase.co`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the project's publishable/anon key (never `service_role`)
+
+In Supabase **Authentication → URL Configuration**, set the Site URL to the public app origin and allow both
+`https://<public-origin>/auth/callback` and `http://localhost:3000/auth/callback`.
+
+When using Supabase as the OAuth broker, the Google Cloud OAuth client's **Authorized redirect URI** must be the
+Supabase callback, not the ParsePilot callback:
+
+```text
+https://<project-ref>.supabase.co/auth/v1/callback
+```
+
+The ParsePilot callback after Supabase returns control is `https://<public-origin>/auth/callback`.
 
 ### Legal gate on Vercel
 

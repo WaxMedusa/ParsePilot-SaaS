@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <div>
       <p className={styles.eyebrow}>Welcome back</p>
       <h1 className={styles.title}>Sign in to your workspace</h1>
-      <p className={styles.lede}>Use the email and password you registered with.</p>
+      <p className={styles.lede}>Continue with Google, or use the email and password you registered with.</p>
       <LoginForm next={next} />
     </div>
   );

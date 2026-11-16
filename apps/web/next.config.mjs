@@ -1,7 +1,19 @@
 /** @type {import('next').NextConfig} */
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Security headers are applied at the edge for every response. The CSP keeps
+function supabaseOrigin() {
+  const value = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!value) return '';
+  try {
+    return new URL(value).origin;
+  } catch {
+    return '';
+  }
+}
+
+const authOrigin = supabaseOrigin();
+
+// Security headers are applied to every response. The CSP keeps
 // scripts self-hosted (Next injects inline bootstrap scripts, hence
 // 'unsafe-inline' for scripts; no third-party script origins are allowed).
 const csp = [
@@ -14,7 +26,7 @@ const csp = [
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
   isProduction ? "script-src 'self' 'unsafe-inline'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  isProduction ? "connect-src 'self'" : "connect-src 'self' ws: wss:",
+  `connect-src 'self'${authOrigin ? ` ${authOrigin}` : ''}${isProduction ? '' : ' ws: wss:'}`,
   'upgrade-insecure-requests',
 ].join('; ');
 
