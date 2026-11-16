@@ -26,10 +26,11 @@ openssl rand -hex 32   # DOWNLOAD_SIGNING_SECRET
 openssl rand -hex 32   # INTERNAL_SERVICE_TOKEN
 ```
 
-`DATABASE_URL` must point at PostgreSQL. For development storage, `STORAGE_DRIVER=local` writes under
-`STORAGE_LOCAL_ROOT` (gitignored). For MinIO, set `STORAGE_DRIVER=s3` and the `S3_*` values. For production without
-S3, set `STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_STORAGE_BUCKET`; the
-bucket must exist and must not be public. The Supabase service-role key is server-only.
+`DATABASE_URL` must point at PostgreSQL. For development storage, `OBJECT_STORAGE_DRIVER=local` writes under
+`STORAGE_LOCAL_ROOT` (gitignored). For MinIO, set `OBJECT_STORAGE_DRIVER=s3` and the `S3_*` values. For production
+without S3, set `OBJECT_STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and
+`SUPABASE_STORAGE_BUCKET`; the bucket must exist and must not be public. The Supabase service-role key is server-only.
+`STORAGE_DRIVER` remains accepted for Docker Compose, but do not set it on Vercel because Buildah reserves that name.
 
 `src/lib/env.ts` validates production configuration and rejects placeholder secrets when `NODE_ENV=production`.
 

@@ -57,8 +57,8 @@ Environment variables are shared by the web service and the worker daemon:
 | `DATABASE_URL` | Managed PostgreSQL. Use the provider's transaction-pooler URL for serverless functions. |
 | `SESSION_SECRET`, `DOWNLOAD_SIGNING_SECRET`, `INTERNAL_SERVICE_TOKEN` | Independent 32-byte random values. |
 | `APP_URL`, `NEXT_PUBLIC_APP_URL` | Public HTTPS origin. If omitted, the app falls back to Vercel's deployment URL. |
-| `STORAGE_DRIVER=supabase` plus `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Private Supabase Storage. The service-role key is server-only and must never be exposed to the browser. |
-| `STORAGE_DRIVER=s3` plus `S3_*` | Alternative private S3-compatible storage. Vercel functions have a read-only filesystem apart from `/tmp`, so local storage is not usable there. |
+| `OBJECT_STORAGE_DRIVER=supabase` plus `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Private Supabase Storage. The service-role key is server-only and must never be exposed to the browser. Do not set `STORAGE_DRIVER` on Vercel: Buildah reserves that name for its container-storage driver. |
+| `OBJECT_STORAGE_DRIVER=s3` plus `S3_*` | Alternative private S3-compatible storage. Vercel functions have a read-only filesystem apart from `/tmp`, so local storage is not usable there. |
 | `QUEUE_DRIVER=database` | Default. PostgreSQL is the queue; the worker polls the internal API. No Redis required. |
 | `REDIS_URL` | Only for the legacy `QUEUE_DRIVER=redis` RQ mode. |
 | `AI_API_KEY` / `AI_*` | Optional; without a key the deterministic extraction rules are used. |

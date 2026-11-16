@@ -69,7 +69,9 @@ export const appConfig = {
     : 'database') as 'redis' | 'database',
   workerPollIntervalSeconds: intEnv('PROCESSOR_POLL_INTERVAL_SECONDS', 5),
   storageDriver: (() => {
-    const driver = optionalEnv('STORAGE_DRIVER', 'local');
+    // OBJECT_STORAGE_DRIVER is preferred on Vercel because Buildah reserves
+    // STORAGE_DRIVER for its container-storage driver and rejects app values.
+    const driver = optionalEnv('OBJECT_STORAGE_DRIVER', optionalEnv('STORAGE_DRIVER', 'local'));
     return (driver === 's3' || driver === 'supabase' ? driver : 'local') as 's3' | 'supabase' | 'local';
   })(),
   storageLocalRoot: optionalEnv('STORAGE_LOCAL_ROOT', './storage-data'),
@@ -142,7 +144,7 @@ export function collectConfigProblems(): ConfigProblem[] {
     requireSecret('DOWNLOAD_SIGNING_SECRET', optionalEnv('DOWNLOAD_SIGNING_SECRET'));
     requireSecret('INTERNAL_SERVICE_TOKEN', optionalEnv('INTERNAL_SERVICE_TOKEN'));
     if (appConfig.storageDriver === 'local') {
-      problems.push({ key: 'STORAGE_DRIVER', message: 'Production requires private object storage (STORAGE_DRIVER=s3 or supabase)' });
+      problems.push({ key: 'OBJECT_STORAGE_DRIVER', message: 'Production requires private object storage (OBJECT_STORAGE_DRIVER=s3 or supabase)' });
     }
     if (appConfig.storageDriver === 's3' && (!process.env.S3_BUCKET || !process.env.S3_ACCESS_KEY_ID || !process.env.S3_SECRET_ACCESS_KEY)) {
       problems.push({ key: 'S3_*', message: 'S3 bucket credentials are required when STORAGE_DRIVER=s3' });
