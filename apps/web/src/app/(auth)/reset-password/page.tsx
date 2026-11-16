@@ -15,12 +15,12 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       <p className={styles.lede}>
         {token
           ? 'Choose a new password. All existing sessions will be signed out once it is changed.'
-          : 'Enter the email associated with your account. If it exists, reset instructions will be generated.'}
+          : 'Enter the email associated with your account. If it exists, we will send reset instructions.'}
       </p>
       {token ? <ResetConfirmForm token={token} /> : <ResetRequestForm />}
       <div className={styles.notice}>
-        Reset tokens are single-use and expire after one hour. No transactional email provider is configured in this
-        deployment, so a production password reset flow requires one to be set up.
+        Reset links are single-use and expire after one hour. If the email does not arrive, check your spam folder or
+        request another link.
       </div>
     </div>
   );

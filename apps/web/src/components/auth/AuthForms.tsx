@@ -7,6 +7,10 @@ import { apiRequest, errorMessage } from '@/lib/client/api';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import styles from './AuthForms.module.css';
 
+function safeNext(value: string | undefined): string | undefined {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : undefined;
+}
+
 function ErrorBox({ message }: { message: string | null }) {
   if (!message) return null;
   return (
@@ -29,7 +33,7 @@ export function LoginForm({ next }: { next?: string }) {
     setError(null);
     try {
       await apiRequest('/api/v1/auth/login', { method: 'POST', body: { email, password } });
-      window.location.assign(next && next.startsWith('/') ? next : '/dashboard');
+      window.location.assign(safeNext(next) ?? '/dashboard');
     } catch (caught) {
       setError(errorMessage(caught));
       setLoading(false);
@@ -84,7 +88,7 @@ export function LoginForm({ next }: { next?: string }) {
   );
 }
 
-export function SignupForm({ plan }: { plan?: string }) {
+export function SignupForm({ plan, next }: { plan?: string; next?: string }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -106,7 +110,9 @@ export function SignupForm({ plan }: { plan?: string }) {
           workspaceName: workspaceName || undefined,
         },
       });
-      const destination = plan ? `/dashboard/settings/billing?plan=${encodeURIComponent(plan)}` : '/dashboard';
+      const destination =
+        safeNext(next) ??
+        (plan ? `/dashboard/settings/billing?plan=${encodeURIComponent(plan)}` : '/dashboard');
       window.location.assign(destination);
     } catch (caught) {
       setError(errorMessage(caught));
@@ -117,7 +123,12 @@ export function SignupForm({ plan }: { plan?: string }) {
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
       <ErrorBox message={error} />
-      <GoogleAuthButton next={plan ? `/dashboard/settings/billing?plan=${encodeURIComponent(plan)}` : '/dashboard'} />
+      <GoogleAuthButton
+        next={
+          safeNext(next) ??
+          (plan ? `/dashboard/settings/billing?plan=${encodeURIComponent(plan)}` : '/dashboard')
+        }
+      />
       <div className={styles.divider}>or create an account with email</div>
       <label className={styles.field}>
         <span className={styles.label}>Your name</span>
@@ -227,7 +238,7 @@ export function ResetRequestForm() {
             <p>{message}</p>
             {devUrl ? (
               <p className={styles.devNote}>
-                No email provider is configured in this development deployment. Use this one-time link:{' '}
+                Email delivery is not configured locally. Use this one-time link for testing:{' '}
                 <a href={devUrl} className={styles.inlineLink}>
                   set a new password
                 </a>

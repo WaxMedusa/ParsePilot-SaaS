@@ -37,8 +37,8 @@ export const PLAN_SEEDS: PlanSeed[] = [
     features: [
       '100 pages per month',
       '10 MB max file size',
+      '2 team seats',
       'CSV exports',
-      '7-day document retention option',
     ],
     stripePriceIdEnv: '',
     isPublic: true,
@@ -57,9 +57,8 @@ export const PLAN_SEEDS: PlanSeed[] = [
     features: [
       '1,500 pages per month',
       '25 MB max file size',
+      '5 team seats',
       'CSV and XLSX exports',
-      'Configurable retention',
-      'Email support',
     ],
     stripePriceIdEnv: 'STRIPE_PRICE_STARTER',
     isPublic: true,
@@ -78,9 +77,8 @@ export const PLAN_SEEDS: PlanSeed[] = [
     features: [
       '6,000 pages per month',
       '50 MB max file size',
+      '20 team seats',
       'CSV and XLSX exports',
-      'Multiple workspaces',
-      'Priority processing queue',
     ],
     stripePriceIdEnv: 'STRIPE_PRICE_GROWTH',
     isPublic: true,
@@ -99,9 +97,8 @@ export const PLAN_SEEDS: PlanSeed[] = [
     features: [
       '25,000 pages per month',
       '100 MB max file size',
+      '100 team seats',
       'Data processing agreement',
-      'Dedicated onboarding',
-      'Custom retention',
     ],
     stripePriceIdEnv: 'STRIPE_PRICE_ENTERPRISE',
     isPublic: true,

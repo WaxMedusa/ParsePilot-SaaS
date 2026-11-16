@@ -45,7 +45,12 @@ export function boolEnv(name: string, fallback = false): boolean {
 }
 
 function deploymentUrl(): string | undefined {
-  const host = optionalEnv('VERCEL_PROJECT_PRODUCTION_URL', optionalEnv('VERCEL_URL'));
+  // Preview links must stay on the preview deployment; otherwise invitation
+  // and password-reset emails point at production.
+  const preview = optionalEnv('VERCEL_ENV') === 'preview';
+  const host = preview
+    ? optionalEnv('VERCEL_URL', optionalEnv('VERCEL_PROJECT_PRODUCTION_URL'))
+    : optionalEnv('VERCEL_PROJECT_PRODUCTION_URL', optionalEnv('VERCEL_URL'));
   return host ? `https://${host}` : undefined;
 }
 
@@ -91,6 +96,13 @@ export const appConfig = {
   stripe: {
     secretKey: optionalEnv('STRIPE_SECRET_KEY'),
     webhookSecret: optionalEnv('STRIPE_WEBHOOK_SECRET'),
+  },
+  email: {
+    provider: optionalEnv('EMAIL_PROVIDER').toLowerCase(),
+    from: optionalEnv('EMAIL_FROM'),
+    replyTo: optionalEnv('EMAIL_REPLY_TO'),
+    resendApiKey: optionalEnv('RESEND_API_KEY'),
+    postmarkToken: optionalEnv('POSTMARK_SERVER_TOKEN'),
   },
   logLevel: optionalEnv('LOG_LEVEL', isProduction ? 'info' : 'debug'),
 };
@@ -156,6 +168,15 @@ export function collectConfigProblems(): ConfigProblem[] {
       problems.push({ key: 'STRIPE_*', message: 'Stripe secret key and webhook secret are required for billing' });
     }
     if (!process.env.APP_URL) problems.push({ key: 'APP_URL', message: 'APP_URL is required to build absolute links' });
+    if (appConfig.email.provider && !['resend', 'postmark', 'none'].includes(appConfig.email.provider)) {
+      problems.push({ key: 'EMAIL_PROVIDER', message: 'EMAIL_PROVIDER must be resend, postmark or none' });
+    }
+    if (appConfig.email.provider === 'resend' && (!appConfig.email.resendApiKey || !appConfig.email.from)) {
+      problems.push({ key: 'EMAIL_*', message: 'RESEND_API_KEY and EMAIL_FROM are required when EMAIL_PROVIDER=resend' });
+    }
+    if (appConfig.email.provider === 'postmark' && (!appConfig.email.postmarkToken || !appConfig.email.from)) {
+      problems.push({ key: 'EMAIL_*', message: 'POSTMARK_SERVER_TOKEN and EMAIL_FROM are required when EMAIL_PROVIDER=postmark' });
+    }
   }
 
   if (appConfig.storageDriver === 's3' && (!appConfig.s3.bucket || !appConfig.s3.accessKeyId)) {

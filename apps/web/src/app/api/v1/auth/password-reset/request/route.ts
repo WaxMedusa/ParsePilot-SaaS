@@ -8,6 +8,8 @@ import { retentionConfig } from '@/config/retention';
 import { recordAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
 import { appUrl, isProduction } from '@/lib/env';
+import { passwordResetEmail } from '@/lib/email/templates';
+import { sendTransactionalEmail } from '@/lib/email/service';
 
 export const runtime = 'nodejs';
 
@@ -16,11 +18,16 @@ const schema = z.object({ email: z.string().trim().toLowerCase().email().max(254
 export const POST = withApi(
   async (request, context) => {
     const { email } = schema.parse(await request.json());
-    const user = await prisma.user.findUnique({ where: { email }, select: { id: true, disabledAt: true } });
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, name: true, email: true, disabledAt: true },
+    });
 
     let devToken: string | null = null;
     if (user && !user.disabledAt) {
       const token = randomBytes(32).toString('base64url');
+      const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+      await prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } });
       await prisma.passwordResetToken.create({
         data: {
           userId: user.id,
@@ -28,6 +35,12 @@ export const POST = withApi(
           expiresAt: new Date(Date.now() + retentionConfig.passwordResetMinutes * 60 * 1000),
         },
       });
+      const message = passwordResetEmail({
+        name: user.name,
+        resetUrl,
+        expiresMinutes: retentionConfig.passwordResetMinutes,
+      });
+      const delivery = await sendTransactionalEmail({ to: user.email, ...message });
       await recordAudit({
         action: 'auth.password_reset_requested',
         actorId: user.id,
@@ -35,16 +48,16 @@ export const POST = withApi(
         targetId: user.id,
         requestId: context.requestId,
       });
-      // No transactional email provider is configured in this deployment. In
-      // non-production the link is returned to the operator for testing only;
-      // production requires an email provider (see docs/deployment.md).
-      logger.info('password_reset_token_created', { userId: user.id });
-      if (!isProduction) devToken = `${appUrl}/reset-password?token=${token}`;
+      logger.info('password_reset_token_created', {
+        userId: user.id,
+        emailSent: delivery.sent,
+      });
+      if (!isProduction && !delivery.sent) devToken = resetUrl;
     }
 
     return ok(
       {
-        message: 'If an account exists for that email, password reset instructions have been generated.',
+        message: 'If an account exists for that email, we will send password reset instructions.',
         ...(devToken ? { developmentResetUrl: devToken } : {}),
       },
       { requestId: context.requestId },

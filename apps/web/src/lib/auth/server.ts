@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { SESSION_COOKIE, resolveSessionToken, type SessionUser } from './session';
 import { listWorkspacesForUser, type WorkspaceAccess } from './authorization';
+import { WORKSPACE_COOKIE } from '../workspaces/cookie';
 
 export type ServerAuth = {
   user: SessionUser;
@@ -17,11 +18,12 @@ export async function getServerAuth(): Promise<ServerAuth | null> {
   const session = await resolveSessionToken(token);
   if (!session) return null;
   const workspaces = await listWorkspacesForUser(session.user.id);
+  const preferred = store.get(WORKSPACE_COOKIE)?.value;
   return {
     user: session.user,
     sessionId: session.sessionId,
     workspaces,
-    workspace: workspaces[0] ?? null,
+    workspace: workspaces.find((workspace) => workspace.id === preferred) ?? workspaces[0] ?? null,
   };
 }
 

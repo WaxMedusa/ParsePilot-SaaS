@@ -15,6 +15,7 @@ import {
 } from '../auth/authorization';
 import { logger } from '../logger';
 import { increment, observe } from '../observability/metrics';
+import { WORKSPACE_COOKIE } from '../workspaces/cookie';
 
 export type RequestAuth = { user: SessionUser; sessionId: string };
 
@@ -96,7 +97,17 @@ export function withApi(handler: ApiHandler, options: ApiOptions = {}) {
           }
           workspace = await resolveWorkspaceAccess(auth.user.id, requested, minimumRole);
         } else {
-          workspace = await resolveDefaultWorkspace(auth.user.id);
+          const cookieWorkspace = request.cookies.get(WORKSPACE_COOKIE)?.value;
+          if (cookieWorkspace) {
+            try {
+              workspace = await resolveWorkspaceAccess(auth.user.id, cookieWorkspace, minimumRole);
+            } catch {
+              // A stale or revoked workspace selection must not break the API.
+              workspace = await resolveDefaultWorkspace(auth.user.id);
+            }
+          } else {
+            workspace = await resolveDefaultWorkspace(auth.user.id);
+          }
         }
         if (!workspace && workspaceRequired) {
           throw ApiError.forbidden('No workspace is available for this account');

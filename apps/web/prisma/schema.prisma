@@ -146,6 +146,8 @@ model User {
   memberships       WorkspaceMember[]
   sessions          Session[]
   passwordResets    PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+  sentInvitations   WorkspaceInvitation[] @relation("InvitationSender")
   ownedWorkspaces   Workspace[]           @relation("WorkspaceOwner")
   uploads           Document[]            @relation("DocumentUploader")
   auditEntries      AuditLog[]
@@ -178,6 +180,7 @@ model Workspace {
   usagePeriods   UsagePeriod[]
   usageLedger    UsageLedger[]
   subscription   Subscription?
+  invitations    WorkspaceInvitation[]
   auditEntries   AuditLog[]
   dataRequests   DataRequest[]
   deletionRecords DeletionRecord[]
@@ -234,6 +237,38 @@ model PasswordResetToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model WorkspaceInvitation {
+  id          String        @id @default(uuid()) @db.Uuid
+  workspaceId String        @db.Uuid
+  invitedById String        @db.Uuid
+  email       String
+  role        WorkspaceRole @default(member)
+  tokenHash   String        @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime      @default(now())
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User          @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, email])
+  @@index([email, expiresAt])
 }
 
 // ---------------------------------------------------------------------------

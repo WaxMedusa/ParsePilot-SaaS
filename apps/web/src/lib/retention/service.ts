@@ -155,6 +155,11 @@ async function cleanAuthArtifacts(summary: RetentionSummary) {
     where: { OR: [{ expiresAt: { lt: new Date() } }, { usedAt: { not: null } }] },
   });
   summary.resetTokensDeleted = tokens.count;
+  await prisma.emailVerificationToken.deleteMany({
+    where: { OR: [{ expiresAt: { lt: new Date() } }, { usedAt: { not: null } }] },
+  });
+  const invitationCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  await prisma.workspaceInvitation.deleteMany({ where: { expiresAt: { lt: invitationCutoff } } });
   const auditCutoff = new Date(Date.now() - retentionConfig.auditLogDays * 24 * 60 * 60 * 1000);
   const audit = await prisma.auditLog.deleteMany({ where: { createdAt: { lt: auditCutoff } } });
   summary.auditEntriesDeleted = audit.count;

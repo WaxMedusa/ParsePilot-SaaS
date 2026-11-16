@@ -8,6 +8,7 @@ import { createSession, setSessionCookie } from '@/lib/auth/session';
 import { createWorkspaceForUser } from '@/lib/workspaces/service';
 import { recordAudit } from '@/lib/audit';
 import { increment } from '@/lib/observability/metrics';
+import { sendEmailVerification } from '@/lib/auth/email-verification';
 
 export const runtime = 'nodejs';
 
@@ -36,7 +37,7 @@ export const POST = withApi(
         name: body.name ?? null,
         passwordHash,
       },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, emailVerifiedAt: true },
     });
 
     const workspace = await createWorkspaceForUser({
@@ -61,9 +62,21 @@ export const POST = withApi(
       requestId: context.requestId,
     });
     await increment('auth_signups');
+    const verification = await sendEmailVerification(user);
 
     return created(
-      { user, workspace, sessionExpiresAt: session.expiresAt.toISOString() },
+      {
+        user: { id: user.id, email: user.email, name: user.name },
+        workspace,
+        sessionExpiresAt: session.expiresAt.toISOString(),
+        emailVerification: {
+          required: !verification.alreadyVerified,
+          sent: verification.sent,
+          ...(verification.developmentVerificationUrl
+            ? { developmentVerificationUrl: verification.developmentVerificationUrl }
+            : {}),
+        },
+      },
       { requestId: context.requestId, headers: { 'Cache-Control': 'no-store' } },
     );
   },

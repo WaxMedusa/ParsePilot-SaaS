@@ -8,7 +8,7 @@ import { retentionConfig } from '../../config/retention';
 export const SESSION_COOKIE = 'pp_session';
 export const CSRF_COOKIE = 'pp_csrf';
 
-export type SessionUser = { id: string; email: string; name: string | null };
+export type SessionUser = { id: string; email: string; name: string | null; emailVerifiedAt: Date | null };
 
 export type ResolvedSession = { sessionId: string; user: SessionUser; expiresAt: Date };
 
@@ -51,7 +51,7 @@ export async function resolveSessionToken(token: string): Promise<ResolvedSessio
       expiresAt: true,
       revokedAt: true,
       lastUsedAt: true,
-      user: { select: { id: true, email: true, name: true, disabledAt: true } },
+      user: { select: { id: true, email: true, name: true, emailVerifiedAt: true, disabledAt: true } },
     },
   });
   if (!session) return null;
@@ -69,7 +69,12 @@ export async function resolveSessionToken(token: string): Promise<ResolvedSessio
   return {
     sessionId: session.id,
     expiresAt: session.expiresAt,
-    user: { id: session.user.id, email: session.user.email, name: session.user.name },
+    user: {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      emailVerifiedAt: session.user.emailVerifiedAt,
+    },
   };
 }
 

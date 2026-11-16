@@ -20,6 +20,10 @@ export const retentionConfig = {
   sessionDays: intEnv('RETENTION_SESSION_DAYS', 30),
   /** Password reset token lifetime in minutes. */
   passwordResetMinutes: intEnv('RETENTION_PASSWORD_RESET_MINUTES', 60),
+  /** Email verification token lifetime in minutes. */
+  emailVerificationMinutes: intEnv('RETENTION_EMAIL_VERIFICATION_MINUTES', 24 * 60),
+  /** Workspace invitation lifetime in days. */
+  invitationDays: intEnv('RETENTION_INVITATION_DAYS', 7),
   /** Audit log retention. */
   auditLogDays: intEnv('RETENTION_AUDIT_LOG_DAYS', 730),
   /** Completed data-request artefacts (e.g. account export bundles). */

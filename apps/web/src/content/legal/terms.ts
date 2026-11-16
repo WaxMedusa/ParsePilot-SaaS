@@ -92,7 +92,7 @@ export const termsOfService: LegalDocument = {
         'Document processing is counted in pages. Pages are charged when a processing job completes successfully. A retry of the same job is not charged again.',
         'A deliberate reprocess of a document creates a new processing job and may count as a new page charge. The billing policy is documented in the product and on the pricing page.',
         'We may impose fair-use limits on requests, uploads, exports and API calls. Rate limits are enforced server-side and communicated through response headers.',
-        'Exceeding a hard limit may result in uploads being rejected, jobs being queued with a lower priority, or access being suspended after notice.',
+        'Exceeding a hard limit may result in uploads being rejected or access being suspended after notice.',
       ],
     },
     {

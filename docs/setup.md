@@ -34,6 +34,10 @@ without S3, set `OBJECT_STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERV
 
 `src/lib/env.ts` validates production configuration and rejects placeholder secrets when `NODE_ENV=production`.
 
+For password reset, email verification and invitations, set `EMAIL_PROVIDER=resend` or `postmark`, `EMAIL_FROM`, and
+the matching API key (`RESEND_API_KEY` or `POSTMARK_SERVER_TOKEN`). Without a provider, development returns a one-time
+link in the UI and production has no working password recovery.
+
 ## 2. Install
 
 ```bash
@@ -97,7 +101,7 @@ configured, the deterministic rules pipeline is used and a warning is recorded.
 | Uploads stay `queued` | worker not running or cannot reach the web internal API | start `python -m app.worker`; check `/ready` and the worker logs |
 | `ocr_unavailable` | Tesseract missing in worker image | install `tesseract-ocr` and `tesseract-ocr-eng` |
 | `/ready` 503 in production | database or storage down, or legacy Redis/processor down | inspect the response `checks` object |
-| Password reset has no email | no email provider configured | development returns a reset URL; production requires a provider |
+| Password reset has no email | no email provider configured | set `EMAIL_PROVIDER`, `EMAIL_FROM` and the provider API key; development shows a one-time reset URL |
 | Production start throws "Legal configuration incomplete" | legal launch gate | complete `src/config/legal.ts` (docs/legal-configuration.md) |
 
 Never disable the legal gate by editing `instrumentation.ts`; complete the configuration instead.

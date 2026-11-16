@@ -17,11 +17,12 @@ export function PricingTeaser({ plans }: { plans: PublicPlan[] }) {
             <h2 className={styles.heading}>
               Start small.
               <br />
-              <em className="serif">Grow on pages, not seats.</em>
+              <em className="serif">Grow on pages, with your team.</em>
             </h2>
             <p className={styles.lede}>
-              Every plan includes the review queue, versioned extractions and private storage. Monthly page limits are
-              enforced server-side and reset at the start of each billing period.
+              Every plan includes the review queue, versioned extractions and private storage. Page limits are enforced
+              server-side and reset at the start of each billing period; team seats are enforced when invitations are
+              sent or accepted.
             </p>
           </div>
         </header>
@@ -78,8 +79,16 @@ export function PricingTeaser({ plans }: { plans: PublicPlan[] }) {
                 </div>
 
                 <div className={styles.action}>
-                  <Link href={`/signup?plan=${plan.code}`} className={styles.cta}>
-                    {plan.priceCents === 0 ? 'Start free' : `Choose ${plan.name}`} <span aria-hidden="true">↗</span>
+                  <Link
+                    href={plan.priceCents === 0 || plan.stripeConfigured ? `/signup?plan=${plan.code}` : '/contact'}
+                    className={styles.cta}
+                  >
+                    {plan.priceCents === 0
+                      ? 'Start free'
+                      : plan.stripeConfigured
+                        ? `Choose ${plan.name}`
+                        : `Ask about ${plan.name}`}{' '}
+                    <span aria-hidden="true">↗</span>
                   </Link>
                 </div>
               </article>
@@ -88,7 +97,7 @@ export function PricingTeaser({ plans }: { plans: PublicPlan[] }) {
         </div>
 
         <div className={styles.footerRow}>
-          <p>Need a volume agreement, custom retention or a signed DPA? Enterprise terms are available on request.</p>
+          <p>Need a volume agreement or a signed DPA? Enterprise terms are available on request. Paid self-serve checkout opens when billing is configured.</p>
           <Link href="/pricing" className={styles.footerLink}>
             Compare all plans <span aria-hidden="true">↗</span>
           </Link>

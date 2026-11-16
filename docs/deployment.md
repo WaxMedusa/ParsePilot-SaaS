@@ -63,6 +63,7 @@ Environment variables are shared by the web service and the worker daemon:
 | `REDIS_URL` | Only for the legacy `QUEUE_DRIVER=redis` RQ mode. |
 | `AI_API_KEY` / `AI_*` | Optional; without a key the deterministic extraction rules are used. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Only when billing is enabled. |
+| `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY` or `POSTMARK_SERVER_TOKEN` | Transactional email for password reset, email verification and invitations. Set `EMAIL_PROVIDER=resend` or `postmark`, verify the sending domain, and keep the API key server-side. `EMAIL_REPLY_TO` is optional. |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL and publishable/anon key for Google sign-in. Never use `service_role` here. |
 
 The long-running **worker** and **scheduler** run in the `worker` Vercel Daemon declared in `vercel.json`; it uses
@@ -80,6 +81,16 @@ DATABASE_URL='postgresql://...' npx prisma migrate deploy --schema apps/web/pris
 
 Seed the public plans once; the marketing pricing section falls back to the catalogue defaults when the database is
 unavailable, but checkout needs the seeded rows.
+
+### Transactional email
+
+Password reset, email verification and workspace invitations use a transactional email provider. The app supports
+Resend and Postmark over their HTTP APIs and does not require an SDK. Set `EMAIL_PROVIDER`, `EMAIL_FROM` and the matching
+server API key in Vercel. Verify the sending domain with the provider (SPF, DKIM and DMARC) before launch.
+
+Team invitations can always be copied from Team settings if delivery fails, but production password reset and email
+verification require a working provider. After configuring the provider, test one reset, one verification and one
+invitation with real mailboxes rather than relying on the preview logs.
 
 ### Supabase Auth (Google sign-in)
 

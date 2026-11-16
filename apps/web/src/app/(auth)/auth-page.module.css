@@ -33,3 +33,13 @@
   font-size: 9.5px;
   line-height: 1.65;
 }
+
+.inlineLink {
+  color: var(--color-foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.inlineLink:hover {
+  color: var(--color-accent);
+}

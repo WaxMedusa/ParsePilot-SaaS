@@ -1,5 +1,6 @@
 import { prisma } from '../prisma';
 import { logger } from '../logger';
+import { appConfig } from '../env';
 
 export type PublicPlan = {
   code: string;
@@ -30,7 +31,7 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
       maxMembers: plan.maxMembers,
       maxWorkspaces: plan.maxWorkspaces,
       features: plan.features as string[],
-      stripeConfigured: Boolean(plan.stripePriceId),
+      stripeConfigured: Boolean(plan.stripePriceId && appConfig.stripe.secretKey),
     }));
   } catch (error) {
     // Marketing pages must still render if the database is unavailable during
@@ -48,7 +49,7 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
       maxMembers: plan.maxMembers,
       maxWorkspaces: plan.maxWorkspaces,
       features: [...plan.features],
-      stripeConfigured: Boolean(process.env[plan.stripePriceIdEnv]),
+      stripeConfigured: Boolean(process.env[plan.stripePriceIdEnv] && appConfig.stripe.secretKey),
     }));
   }
 }

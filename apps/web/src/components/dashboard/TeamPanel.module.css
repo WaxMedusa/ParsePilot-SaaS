@@ -1,0 +1,362 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary > div {
+  min-width: 0;
+  padding: 14px 18px 16px 0;
+  border-right: 1px solid var(--color-border);
+}
+
+.summary > div:not(:first-child) {
+  padding-left: 18px;
+}
+
+.summary > div:last-child {
+  border-right: 0;
+}
+
+.summaryLabel {
+  display: block;
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 5px;
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 520;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error,
+.notice {
+  margin-top: 16px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  border-left: 2px solid var(--color-danger);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.notice {
+  border-left-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.inviteLink {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-left: 2px solid var(--color-primary);
+  background: var(--color-canvas);
+}
+
+.inviteLink label {
+  display: block;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.inviteLinkRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.inviteLinkRow input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-white);
+  padding: 8px;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.inviteLinkRow button,
+.form button {
+  border: 0;
+  border-radius: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  padding: 9px 13px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.inviteLink p {
+  margin-top: 7px;
+  color: var(--color-faint);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.section {
+  padding: 26px 0 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.kicker {
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.section h2 {
+  margin-top: 5px;
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.sectionMeta {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.form label > span {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.form input,
+.form select,
+.roleSelect {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-white);
+  padding: 0 9px;
+  color: var(--color-ink);
+  font-size: 11px;
+}
+
+.form button {
+  height: 34px;
+  white-space: nowrap;
+}
+
+.form button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.helper {
+  margin-top: 12px;
+  color: var(--color-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.tableWrap {
+  margin-top: 18px;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table th {
+  padding: 0 10px 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table th:first-child,
+.table td:first-child {
+  width: 34%;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 16%;
+}
+
+.table th:last-child,
+.table td:last-child {
+  width: 12%;
+}
+
+.table td {
+  padding: 11px 10px 11px 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-soft);
+  vertical-align: top;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.memberName {
+  display: block;
+  color: var(--color-ink);
+  font-size: 12px;
+  font-weight: 520;
+}
+
+.memberEmail {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  overflow-wrap: anywhere;
+}
+
+.you {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.role {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.roleSelect {
+  height: 28px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.date {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+}
+
+.actions {
+  text-align: right;
+}
+
+.actions button {
+  border: 0;
+  border-bottom: 1px solid var(--color-border-strong);
+  padding: 2px 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.actions button:hover {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.footnote {
+  margin-top: 18px;
+  color: var(--color-faint);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .summary > div:nth-child(3) {
+    padding-left: 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .summary > div:nth-child(4) {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .form {
+    grid-template-columns: minmax(0, 1fr) 130px;
+  }
+
+  .form button {
+    grid-column: 1 / -1;
+  }
+
+  .table {
+    min-width: 650px;
+  }
+}

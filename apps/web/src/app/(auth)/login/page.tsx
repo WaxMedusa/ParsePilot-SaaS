@@ -10,7 +10,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const auth = await getServerAuth();
   if (auth) redirect('/dashboard');
   const params = await searchParams;
-  const next = params.next && params.next.startsWith('/') ? params.next : undefined;
+  const next =
+    params.next && params.next.startsWith('/') && !params.next.startsWith('//') ? params.next : undefined;
 
   return (
     <div>

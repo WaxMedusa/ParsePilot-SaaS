@@ -26,12 +26,12 @@ const FAQ = [
   {
     question: 'Can I change plan later?',
     answer:
-      'Yes. Upgrades take effect immediately through Stripe checkout. Downgrades take effect at the end of the current billing period, and existing documents stay available.',
+      'Plan entitlements are enforced now. Self-serve checkout and plan changes are enabled once billing is configured on the deployment; until then, paid plans are shown for comparison and no charge is taken.',
   },
   {
-    question: 'What happens if a payment fails?',
+    question: 'How will billing work when paid plans open?',
     answer:
-      'The subscription is marked past due and processing continues during a seven-day grace period while payment is retried. After that, processing is blocked until billing is resolved.',
+      'Paid plans will use Stripe Checkout. A failed payment marks the subscription past due and leaves a seven-day grace period while it is retried; after that, processing is blocked until billing is resolved. Until billing is configured, no paid subscription can be started or charged.',
   },
   {
     question: 'Do you offer a data processing agreement?',
@@ -56,6 +56,7 @@ const INCLUDED = [
 
 export default async function PricingPage() {
   const plans = await listPublicPlans();
+  const billingConfigured = plans.some((plan) => plan.stripeConfigured);
 
   return (
     <div className={styles.page}>
@@ -63,10 +64,10 @@ export default async function PricingPage() {
         <div className="container">
           <div className={styles.heroMeta}>
             <p className="kicker">Pricing / plans</p>
-            <span>Page volume, not seat count</span>
+            <span>Page volume and team seats</span>
           </div>
           <div className={styles.heroGrid}>
-            <h1 className={styles.title}>Priced on pages processed, not people invited.</h1>
+            <h1 className={styles.title}>Priced on pages processed, with team seats included.</h1>
             <div className={styles.heroCopy}>
               <p className={styles.lede}>
                 Every plan includes the full extraction pipeline, validation, duplicate detection and the review queue.
@@ -96,7 +97,8 @@ export default async function PricingPage() {
               const featured = plan.code === 'starter';
               const enterprise = plan.code === 'enterprise';
               const price = enterprise ? 'Custom' : plan.priceCents === 0 ? 'Free' : formatCurrencyCents(plan.priceCents, plan.currency);
-              const href = enterprise ? '/contact' : `/signup?plan=${plan.code}`;
+              const selfServe = plan.priceCents === 0 || plan.stripeConfigured;
+              const href = enterprise || !selfServe ? '/contact' : `/signup?plan=${plan.code}`;
               return (
                 <article key={plan.code} className={`${styles.plan} ${featured ? styles.planFeatured : ''}`}>
                   <div className={styles.planIdentity}>
@@ -133,7 +135,7 @@ export default async function PricingPage() {
                   <div className={`${styles.spec} ${styles.specMembers}`}>
                     <span>Members</span>
                     <strong>{plan.maxMembers}</strong>
-                    <small>{plan.maxWorkspaces} workspace limit</small>
+                    <small>seats included</small>
                   </div>
 
                   <div className={styles.action}>
@@ -143,7 +145,13 @@ export default async function PricingPage() {
                       size="sm"
                       iconAfter={<span aria-hidden="true">↗</span>}
                     >
-                      {enterprise ? 'Talk to us' : plan.priceCents === 0 ? 'Start free' : `Choose ${plan.name}`}
+                      {enterprise
+                        ? 'Talk to us'
+                        : plan.priceCents === 0
+                          ? 'Start free'
+                          : plan.stripeConfigured
+                            ? `Choose ${plan.name}`
+                            : `Ask about ${plan.name}`}
                     </ButtonLink>
                   </div>
                 </article>
@@ -152,9 +160,11 @@ export default async function PricingPage() {
           </div>
 
           <p className={styles.billingNote}>
-            Prices are shown in USD and exclude applicable taxes. Payment processing is handled by Stripe when billing is
-            configured on this deployment. Enterprise terms are available on request — see the{' '}
-            <Link href="/contact">contact page</Link>.
+            Prices are shown in USD and exclude applicable taxes.{' '}
+            {billingConfigured
+              ? ' Payment processing is handled by Stripe.'
+              : ' Self-serve paid checkout is not enabled yet; no charge is taken.'}{' '}
+            Enterprise terms are available on request — see the <Link href="/contact">contact page</Link>.
           </p>
         </div>
       </section>

@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { apiRequest } from '@/lib/client/api';
 import { LiveRefresh, isLiveDashboardPath } from './LiveRefresh';
+import { EmailVerificationBanner } from './EmailVerificationBanner';
 import styles from './DashboardShell.module.css';
 
 const WORKSPACE_NAV = [
@@ -20,22 +21,79 @@ const WORKSPACE_NAV = [
 
 const SETTINGS_NAV = [
   { href: '/dashboard/settings/billing', label: 'Billing', index: '07' },
-  { href: '/dashboard/settings/privacy', label: 'Privacy & data', index: '08' },
+  { href: '/dashboard/settings/team', label: 'Team', index: '08' },
+  { href: '/dashboard/settings/privacy', label: 'Privacy & data', index: '09' },
 ];
 
 type Props = {
   children: React.ReactNode;
-  user: { name: string | null; email: string };
-  workspace: { name: string; slug: string; planCode: string; role: string };
+  user: { name: string | null; email: string; emailVerified: boolean };
+  workspace: { id: string; name: string; slug: string; planCode: string; role: string };
+  workspaces: { id: string; name: string; planCode: string; role: string }[];
   reviewCount: number;
 };
+
+function WorkspaceSwitcher({
+  current,
+  workspaces,
+}: {
+  current: Props['workspace'];
+  workspaces: Props['workspaces'];
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const switchWorkspace = async (workspaceId: string) => {
+    if (workspaceId === current.id) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiRequest('/api/v1/workspaces/switch', { method: 'POST', body: { workspaceId } });
+      window.location.assign('/dashboard');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not switch workspace.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={styles.workspaceChip}>
+      <span className={styles.workspaceMark}>{current.name.slice(0, 1).toUpperCase()}</span>
+      <div className={styles.workspaceText}>
+        {workspaces.length > 1 ? (
+          <select
+            className={styles.workspaceSelect}
+            value={current.id}
+            onChange={(event) => switchWorkspace(event.target.value)}
+            disabled={busy}
+            aria-label="Switch workspace"
+            title="Switch workspace"
+          >
+            {workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className={styles.workspaceName}>{current.name}</span>
+        )}
+        <span className={styles.workspacePlan}>
+          {current.planCode} plan · {current.role}
+          {busy ? ' · switching…' : ''}
+        </span>
+        {error ? <span className={styles.workspaceError}>{error}</span> : null}
+      </div>
+    </div>
+  );
+}
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard';
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function DashboardShell({ children, user, workspace, reviewCount }: Props) {
+export function DashboardShell({ children, user, workspace, workspaces, reviewCount }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const live = isLiveDashboardPath(pathname);
@@ -74,17 +132,14 @@ export function DashboardShell({ children, user, workspace, reviewCount }: Props
     .join('')
     .toUpperCase();
 
+  const canManageTeam = workspace.role === 'owner' || workspace.role === 'admin';
+  const settingsNav = canManageTeam
+    ? SETTINGS_NAV
+    : SETTINGS_NAV.filter((item) => item.href !== '/dashboard/settings/team');
+
   const nav = (
     <>
-      <div className={styles.workspaceChip}>
-        <span className={styles.workspaceMark}>{workspace.name.slice(0, 1).toUpperCase()}</span>
-        <span className={styles.workspaceText}>
-          <span className={styles.workspaceName}>{workspace.name}</span>
-          <span className={styles.workspacePlan}>
-            {workspace.planCode} plan · {workspace.role}
-          </span>
-        </span>
-      </div>
+      <WorkspaceSwitcher current={workspace} workspaces={workspaces} />
 
       <nav className={styles.nav} aria-label="Dashboard">
         <p className={styles.navLabel}>Workspace</p>
@@ -108,7 +163,7 @@ export function DashboardShell({ children, user, workspace, reviewCount }: Props
           );
         })}
         <p className={`${styles.navLabel} ${styles.navLabelSpaced}`}>Settings</p>
-        {SETTINGS_NAV.map((item) => {
+        {settingsNav.map((item) => {
           return (
             <Link
               key={item.href}
@@ -189,7 +244,10 @@ export function DashboardShell({ children, user, workspace, reviewCount }: Props
         </div>
       ) : null}
 
-      <div className={styles.main}>{children}</div>
+      <div className={styles.main}>
+        {!user.emailVerified ? <EmailVerificationBanner email={user.email} /> : null}
+        {children}
+      </div>
     </div>
   );
 }

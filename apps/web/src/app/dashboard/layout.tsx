@@ -13,13 +13,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <DashboardShell
-      user={{ name: auth.user.name, email: auth.user.email }}
+      user={{
+        name: auth.user.name,
+        email: auth.user.email,
+        emailVerified: Boolean(auth.user.emailVerifiedAt),
+      }}
       workspace={{
+        id: auth.workspace.id,
         name: auth.workspace.name,
         slug: auth.workspace.slug,
         planCode: auth.workspace.planCode,
         role: auth.workspace.role,
       }}
+      workspaces={auth.workspaces.map((workspace) => ({
+        id: workspace.id,
+        name: workspace.name,
+        planCode: workspace.planCode,
+        role: workspace.role,
+      }))}
       reviewCount={counts.needs_review ?? 0}
     >
       {children}

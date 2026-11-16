@@ -10,6 +10,8 @@ them in sync.
 | Generated exports | 7 days | `RETENTION_EXPORT_DAYS` | expire, then delete object |
 | Sessions | 30 days absolute | `RETENTION_SESSION_DAYS` | session resolution rejects expired tokens |
 | Password reset tokens | 60 minutes | `RETENTION_PASSWORD_RESET_MINUTES` | single-use, expiry checked |
+| Email verification tokens | 24 hours | `RETENTION_EMAIL_VERIFICATION_MINUTES` | single-use, expiry checked |
+| Workspace invitations | 7 days | `RETENTION_INVITATION_DAYS` | email-bound, single-use, revocable |
 | Account deletion grace period | 30 days | `RETENTION_ACCOUNT_DELETION_GRACE_DAYS` | deletion request executed after grace |
 | Data-request artefacts | 7 days | `RETENTION_DATA_REQUEST_ARTEFACT_DAYS` | signed download rejects expired artefacts |
 | Signed URLs | 300 seconds | `RETENTION_SIGNED_URL_SECONDS` | signature expiry |
