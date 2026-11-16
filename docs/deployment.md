@@ -84,6 +84,9 @@ browser completes the Google handshake with Supabase, then posts the Supabase ac
 local user, and issues the normal `pp_session` cookie. Existing email/password accounts keep working and are linked by
 their verified email on first Google sign-in.
 
+Environment changes require a new deployment. `NEXT_PUBLIC_*` values are baked into the browser bundle and CSP at build
+time, so saving them in Vercel does not change an existing deployment; push a commit or use **Redeploy**.
+
 Set these public values in Vercel and locally (they are safe to expose):
 
 - `NEXT_PUBLIC_SUPABASE_URL` — `https://<project-ref>.supabase.co`
