@@ -3,7 +3,7 @@ import { checkDatabase } from '@/lib/prisma';
 import { checkRedis } from '@/lib/redis';
 import { getStorage } from '@/lib/storage';
 import { checkProcessor } from '@/lib/jobs/queue';
-import { isProduction } from '@/lib/env';
+import { appConfig, isProduction } from '@/lib/env';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -16,23 +16,29 @@ export const runtime = 'nodejs';
  * absence is reported as degraded so local UI work remains possible.
  */
 export async function GET() {
+  const usesRedis = appConfig.queueDriver === 'redis';
   const [database, storage, redis, processor] = await Promise.all([
     checkDatabase(),
     getStorage()
       .healthCheck()
       .catch((error: unknown) => ({ ok: false, error: error instanceof Error ? error.name : 'unknown' })),
-    checkRedis(),
-    checkProcessor(),
+    usesRedis ? checkRedis() : Promise.resolve({ ok: true, latencyMs: 0 }),
+    usesRedis ? checkProcessor() : Promise.resolve({ ok: true, latencyMs: 0 }),
   ]);
 
   const checks = {
     database: { ok: database.ok, latencyMs: database.latencyMs },
     storage: { ok: storage.ok, driver: getStorage().driver },
-    redis: { ok: redis.ok, latencyMs: redis.latencyMs },
-    processor: { ok: processor.ok, latencyMs: processor.latencyMs },
+    queue: { ok: true, driver: appConfig.queueDriver },
+    ...(usesRedis
+      ? {
+          redis: { ok: redis.ok, latencyMs: redis.latencyMs },
+          processor: { ok: processor.ok, latencyMs: processor.latencyMs },
+        }
+      : {}),
   };
 
-  const requiredOk = checks.database.ok && checks.storage.ok && (!isProduction || (checks.redis.ok && checks.processor.ok));
+  const requiredOk = checks.database.ok && checks.storage.ok && (!isProduction || !usesRedis || (redis.ok && processor.ok));
   const degraded = Object.entries(checks)
     .filter(([, value]) => !value.ok)
     .map(([key]) => key);

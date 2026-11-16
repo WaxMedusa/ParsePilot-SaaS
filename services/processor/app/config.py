@@ -65,6 +65,7 @@ class Settings:
     export_timeout_seconds: int
     scheduler_interval_seconds: int
     reconcile_interval_seconds: int
+    poll_interval_seconds: int
 
 
 @lru_cache(maxsize=1)
@@ -91,4 +92,5 @@ def get_settings() -> Settings:
         export_timeout_seconds=_int_env("PROCESSOR_EXPORT_TIMEOUT_SECONDS", 300),
         scheduler_interval_seconds=_int_env("PROCESSOR_SCHEDULER_INTERVAL_SECONDS", 3600),
         reconcile_interval_seconds=_int_env("PROCESSOR_RECONCILE_INTERVAL_SECONDS", 300),
+        poll_interval_seconds=_int_env("PROCESSOR_POLL_INTERVAL_SECONDS", 5),
     )

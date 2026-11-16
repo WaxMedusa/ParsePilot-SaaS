@@ -34,38 +34,43 @@ Services:
 The `web` service waits for migrations, Redis, the bucket and processor health. `worker` and `scheduler` wait for web
 health because they call its internal API.
 
-## Vercel (web and processor services)
+## Vercel (web service and worker daemon)
 
-The root `vercel.json` deploys both services in one Vercel project (Services is a Vercel beta feature):
+The root `vercel.json` deploys the web service and a background daemon in one Vercel project:
 
 - `web` is the Next.js app at `apps/web`. Every public route is rewritten to it.
-- `processor` is the FastAPI enqueue/health service at `services/processor`. It has no public route; the web service
-  receives its internal URL through the `PROCESSOR_URL` service binding.
+- `worker` is a Vercel Daemon built from `services/processor/Dockerfile.vercel`. It runs the RQ-free worker and
+  scheduler under `app.daemon`, pulls jobs from the web internal API, and has no public route.
 
 Import the repository at the **root**, not `apps/web`, so Vercel can read `vercel.json`. Vercel builds each service
-separately and installs the npm workspace from the root lockfile. Node.js must be 20.11 or newer.
+separately and installs the npm workspace from the root lockfile. Node.js must be 20.11 or newer. Daemons are in
+public beta and run in production only.
 
 Vercel Services does not support Edge Functions. This app therefore has no Edge middleware: the CSRF cookie is issued
 by `GET /api/v1/auth/csrf` and bootstrapped in the browser, while the dashboard layout enforces authentication. Do not
 reintroduce `src/middleware.ts` or an `export const runtime = 'edge'` route in the `web` service.
 
-Environment variables are shared by both services:
+Environment variables are shared by the web service and the worker daemon:
 
 | Variable | Notes |
 | --- | --- |
 | `DATABASE_URL` | Managed PostgreSQL. Use the provider's transaction-pooler URL for serverless functions. |
 | `SESSION_SECRET`, `DOWNLOAD_SIGNING_SECRET`, `INTERNAL_SERVICE_TOKEN` | Independent 32-byte random values. |
 | `APP_URL`, `NEXT_PUBLIC_APP_URL` | Public HTTPS origin. If omitted, the app falls back to Vercel's deployment URL. |
-| `STORAGE_DRIVER=s3` plus `S3_*` | Required: Vercel functions have a read-only filesystem apart from `/tmp`. |
-| `REDIS_URL` | Required for rate limiting and for handing jobs to the worker. |
+| `STORAGE_DRIVER=supabase` plus `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Private Supabase Storage. The service-role key is server-only and must never be exposed to the browser. |
+| `STORAGE_DRIVER=s3` plus `S3_*` | Alternative private S3-compatible storage. Vercel functions have a read-only filesystem apart from `/tmp`, so local storage is not usable there. |
+| `QUEUE_DRIVER=database` | Default. PostgreSQL is the queue; the worker polls the internal API. No Redis required. |
+| `REDIS_URL` | Only for the legacy `QUEUE_DRIVER=redis` RQ mode. |
 | `AI_API_KEY` / `AI_*` | Optional; without a key the deterministic extraction rules are used. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Only when billing is enabled. |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL and publishable/anon key for Google sign-in. Never use `service_role` here. |
 
-The FastAPI service only enqueues work. The long-running RQ **worker** and **scheduler** are not services; run them
-as Vercel Daemons (containers) or on any container host. They need `REDIS_URL`, `INTERNAL_SERVICE_TOKEN` and a
-`WEB_INTERNAL_URL` that reaches this deployment, and the worker also needs `AI_*`/OCR configuration. Without a worker,
-uploads queue but never finish. The existing `services/processor/Dockerfile` can be used for a daemon or container.
+The long-running **worker** and **scheduler** run in the `worker` Vercel Daemon declared in `vercel.json`; it uses
+`services/processor/Dockerfile.vercel` and runs both processes under `app.daemon`. In database mode the daemon needs
+only `INTERNAL_SERVICE_TOKEN` and its `WEB_INTERNAL_URL` binding to the `web` service: it polls
+`/api/v1/internal/jobs/next` and claims each job atomically. The worker also needs `AI_*`/OCR configuration; the image
+includes Tesseract. Without a worker, uploads remain queued but never finish. The separate FastAPI processor service
+is only needed for legacy Redis/RQ deployments.
 
 Run migrations from CI or a workstation, not from the Vercel build:
 

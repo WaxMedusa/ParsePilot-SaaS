@@ -1,5 +1,6 @@
 import type { DocumentStatus, JobStatus, JobType, Prisma, ProcessingJob } from '@prisma/client';
 import { prisma } from '../prisma';
+import { appConfig } from '../env';
 import { ApiError } from '../http/errors';
 import { logger, categorizeError } from '../logger';
 import { increment, observe } from '../observability/metrics';
@@ -94,6 +95,14 @@ export async function getJobForWorkspace(jobId: string, workspaceId: string) {
   });
   if (!job) throw ApiError.notFound('Job not found');
   return job;
+}
+
+export async function nextQueuedJob(): Promise<{ id: string } | null> {
+  return prisma.processingJob.findFirst({
+    where: { status: 'queued', availableAt: { lte: new Date() } },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
 }
 
 export async function listJobs(params: {
@@ -526,11 +535,14 @@ export async function failJob(jobId: string, workerId: string, failure: JobFailu
   await increment('jobs_retried', { type: job.type, category });
   logger.warn('job_retry_scheduled', { jobId, type: job.type, attempts, delaySeconds: delay, category });
 
-  // The retry is announced immediately; the worker's queue delay is enforced by
-  // `availableAt` at claim time, so a restart cannot lose the schedule.
-  setTimeout(() => {
-    enqueueJobRemotely(updated).catch(() => undefined);
-  }, Math.min(delay * 1000, 5_000));
+  // The retry is announced immediately in Redis mode; the worker's queue delay
+  // is enforced by `availableAt` at claim time, so a restart cannot lose the
+  // schedule. Database mode needs no announcement because the worker polls.
+  if (appConfig.queueDriver === 'redis') {
+    setTimeout(() => {
+      enqueueJobRemotely(updated).catch(() => undefined);
+    }, Math.min(delay * 1000, 5_000));
+  }
 
   return { status: 'queued', retryInSeconds: delay };
 }
@@ -633,9 +645,11 @@ export async function reconcileJobs(): Promise<{ recovered: number; reannounced:
   });
 
   let reannounced = 0;
-  for (const job of pending) {
-    const result = await enqueueJobRemotely(job);
-    if (result.enqueued) reannounced += 1;
+  if (appConfig.queueDriver === 'redis') {
+    for (const job of pending) {
+      const result = await enqueueJobRemotely(job);
+      if (result.enqueued) reannounced += 1;
+    }
   }
 
   if (recovered || reannounced) {

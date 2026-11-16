@@ -1,6 +1,7 @@
 import { appConfig } from '../env';
 import { LocalStorage } from './local';
 import { S3Storage } from './s3';
+import { SupabaseStorage } from './supabase';
 import type { StorageProvider } from './types';
 
 export type { StorageProvider } from './types';
@@ -10,7 +11,12 @@ const globalForStorage = globalThis as unknown as { __parsepilotStorage?: Storag
 
 export function getStorage(): StorageProvider {
   if (!globalForStorage.__parsepilotStorage) {
-    globalForStorage.__parsepilotStorage = appConfig.storageDriver === 's3' ? new S3Storage() : new LocalStorage();
+    globalForStorage.__parsepilotStorage =
+      appConfig.storageDriver === 's3'
+        ? new S3Storage()
+        : appConfig.storageDriver === 'supabase'
+          ? new SupabaseStorage()
+          : new LocalStorage();
   }
   return globalForStorage.__parsepilotStorage;
 }

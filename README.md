@@ -4,8 +4,8 @@ Document data extraction for finance teams. Upload invoices, receipts, purchase 
 background pipeline extracts text (with OCR only when needed), pulls structured fields, validates totals and routes
 uncertain documents to human review. Reviewed data can be exported as CSV or XLSX.
 
-This repository is a complete application: Next.js web app and REST API, PostgreSQL, Redis-backed Python worker,
-private object storage, Stripe billing, privacy controls, legal pages and a Docker Compose stack.
+This repository is a complete application: Next.js web app and REST API, PostgreSQL, a PostgreSQL-backed Python
+worker and scheduler, private object storage, Stripe billing, privacy controls, legal pages and a Docker Compose stack.
 
 ## Design constraints
 
@@ -18,28 +18,27 @@ private object storage, Stripe billing, privacy controls, legal pages and a Dock
 ## Architecture
 
 ```
-Browser ──► Next.js (apps/web) ──► PostgreSQL (authoritative state)
+Browser ──► Next.js (apps/web) ──► PostgreSQL (authoritative state + job queue)
                 │  │
-                │  ├──► Redis (rate limits, readiness)
+                │  ├──► optional Redis (rate limits only when configured)
                 │  ├──► Stripe webhooks (signature verified, replay-safe)
-                │  └──► private object storage (local dev or S3/MinIO)
+                │  └──► private object storage (Supabase Storage, S3 or MinIO)
                 │
-                └──► FastAPI processor (services/processor) ──► Redis/RQ
-                          ▲                                      │
-                          └──── RQ worker ◄──────────────────────┘
+                └──► Vercel Daemon (worker + scheduler)
                                      │
                                      └── internal API ──► Next.js ──► PostgreSQL
 ```
 
-The database is the source of truth for every job. Redis only delivers work: if the queue is flushed or a worker dies,
-the reconciler re-announces queued jobs from PostgreSQL. Usage is recorded in an idempotent ledger keyed by job id, so a
-retry never charges twice. See [docs/billing.md](docs/billing.md).
+The database is the source of truth for every job and is also the queue. The worker asks the web service for the
+oldest eligible queued job and claims it atomically; if a worker dies, the job row remains queued or is recovered by
+the reconciler. Usage is recorded in an idempotent ledger keyed by job id, so a retry never charges twice. See
+[docs/billing.md](docs/billing.md).
 
 ## Repository layout
 
 ```
 apps/web                 Next.js 15 app, API routes, Prisma schema and migrations
-services/processor       FastAPI enqueue API, RQ worker, pipeline, scheduler, pytest suite
+services/processor       Database-polling worker, scheduler, pipeline, optional legacy FastAPI enqueue API, tests
 scripts                  Design, legal and backup tooling
 docs                     Setup, deployment, security, retention, billing and recovery runbooks
 docker-compose.yml       PostgreSQL, Redis, MinIO, web, processor, worker, scheduler
@@ -47,8 +46,8 @@ docker-compose.yml       PostgreSQL, Redis, MinIO, web, processor, worker, sched
 
 ## Quickstart (local, without Docker)
 
-Prerequisites: Node.js 20.11+, npm 10+, Python 3.12+, PostgreSQL 16, Redis 7. Tesseract is required only for scanned
-documents (`apt-get install tesseract-ocr`).
+Prerequisites: Node.js 20.11+, npm 10+, Python 3.12+, PostgreSQL 16. Redis is optional and only used in the legacy
+`QUEUE_DRIVER=redis` mode. Tesseract is required only for scanned documents (`apt-get install tesseract-ocr`).
 
 ```bash
 cp .env.example .env
@@ -72,9 +71,10 @@ Run each process in its own terminal:
 
 ```bash
 npm run dev                                  # web + API on :3000
-cd services/processor && .venv/bin/uvicorn app.main:app --reload --port 8000
-cd services/processor && .venv/bin/python -m app.worker
-cd services/processor && .venv/bin/python -m app.scheduler
+cd services/processor && .venv/bin/python -m app.worker      # polls PostgreSQL-backed jobs
+cd services/processor && .venv/bin/python -m app.scheduler   # reconciliation + retention
+# Optional legacy Redis/RQ enqueue service:
+# cd services/processor && .venv/bin/uvicorn app.main:app --reload --port 8000
 ```
 
 Open <http://localhost:3000>. Health is at `/health`, readiness at `/ready`, API docs at `/docs/api`.
@@ -90,8 +90,9 @@ SEED_DEMO_PASSWORD='choose-a-strong-password' npm run db:seed
 
 All configuration is environment-based; see [.env.example](.env.example) and [docs/setup.md](docs/setup.md).
 Secrets have no production fallbacks: `src/lib/env.ts` rejects a production start with development secrets.
-Storage is `local` for development and `s3` for MinIO/S3. Stripe and AI extraction are optional; the app degrades
-explicitly rather than silently inventing results.
+Storage is `local` for development, `supabase` for private Supabase Storage, or `s3` for MinIO/S3. The queue is
+PostgreSQL-backed by default; `QUEUE_DRIVER=redis` keeps the legacy RQ path. Stripe and AI extraction are optional;
+the app degrades explicitly rather than silently inventing results.
 
 ## Testing and checks
 

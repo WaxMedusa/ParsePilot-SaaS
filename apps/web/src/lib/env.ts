@@ -64,7 +64,14 @@ export const appConfig = {
   processorUrl: optionalEnv('PROCESSOR_URL', 'http://localhost:8000').replace(/\/$/, ''),
   processorTimeoutMs: intEnv('PROCESSOR_TIMEOUT_MS', 10_000),
   queueName: optionalEnv('QUEUE_NAME', 'parsepilot:jobs'),
-  storageDriver: (optionalEnv('STORAGE_DRIVER', 'local') === 's3' ? 's3' : 'local') as 's3' | 'local',
+  queueDriver: (optionalEnv('QUEUE_DRIVER', optionalEnv('REDIS_URL') ? 'redis' : 'database') === 'redis'
+    ? 'redis'
+    : 'database') as 'redis' | 'database',
+  workerPollIntervalSeconds: intEnv('PROCESSOR_POLL_INTERVAL_SECONDS', 5),
+  storageDriver: (() => {
+    const driver = optionalEnv('STORAGE_DRIVER', 'local');
+    return (driver === 's3' || driver === 'supabase' ? driver : 'local') as 's3' | 'supabase' | 'local';
+  })(),
   storageLocalRoot: optionalEnv('STORAGE_LOCAL_ROOT', './storage-data'),
   s3: {
     endpoint: optionalEnv('S3_ENDPOINT'),
@@ -73,6 +80,11 @@ export const appConfig = {
     accessKeyId: optionalEnv('S3_ACCESS_KEY_ID'),
     secretAccessKey: optionalEnv('S3_SECRET_ACCESS_KEY'),
     forcePathStyle: boolEnv('S3_FORCE_PATH_STYLE', true),
+  },
+  supabaseStorage: {
+    url: optionalEnv('SUPABASE_URL', optionalEnv('NEXT_PUBLIC_SUPABASE_URL')),
+    serviceRoleKey: optionalEnv('SUPABASE_SERVICE_ROLE_KEY'),
+    bucket: optionalEnv('SUPABASE_STORAGE_BUCKET', 'parsepilot-documents'),
   },
   stripe: {
     secretKey: optionalEnv('STRIPE_SECRET_KEY'),
@@ -120,15 +132,23 @@ export function collectConfigProblems(): ConfigProblem[] {
 
   if (isProduction) {
     if (!process.env.DATABASE_URL) problems.push({ key: 'DATABASE_URL', message: 'DATABASE_URL is required' });
-    if (!process.env.REDIS_URL) problems.push({ key: 'REDIS_URL', message: 'REDIS_URL is required for background processing' });
+    if (appConfig.queueDriver === 'redis' && !process.env.REDIS_URL) {
+      problems.push({ key: 'REDIS_URL', message: 'REDIS_URL is required when QUEUE_DRIVER=redis' });
+    }
+    if (appConfig.queueDriver === 'redis' && !process.env.PROCESSOR_URL) {
+      problems.push({ key: 'PROCESSOR_URL', message: 'PROCESSOR_URL is required when QUEUE_DRIVER=redis' });
+    }
     requireSecret('SESSION_SECRET', optionalEnv('SESSION_SECRET'));
     requireSecret('DOWNLOAD_SIGNING_SECRET', optionalEnv('DOWNLOAD_SIGNING_SECRET'));
     requireSecret('INTERNAL_SERVICE_TOKEN', optionalEnv('INTERNAL_SERVICE_TOKEN'));
-    if (appConfig.storageDriver !== 's3') {
-      problems.push({ key: 'STORAGE_DRIVER', message: 'Production requires private object storage (STORAGE_DRIVER=s3)' });
+    if (appConfig.storageDriver === 'local') {
+      problems.push({ key: 'STORAGE_DRIVER', message: 'Production requires private object storage (STORAGE_DRIVER=s3 or supabase)' });
     }
-    if (!process.env.S3_BUCKET || !process.env.S3_ACCESS_KEY_ID || !process.env.S3_SECRET_ACCESS_KEY) {
-      problems.push({ key: 'S3_*', message: 'S3 bucket credentials are required in production' });
+    if (appConfig.storageDriver === 's3' && (!process.env.S3_BUCKET || !process.env.S3_ACCESS_KEY_ID || !process.env.S3_SECRET_ACCESS_KEY)) {
+      problems.push({ key: 'S3_*', message: 'S3 bucket credentials are required when STORAGE_DRIVER=s3' });
+    }
+    if (appConfig.storageDriver === 'supabase' && (!appConfig.supabaseStorage.url || !appConfig.supabaseStorage.serviceRoleKey || !appConfig.supabaseStorage.bucket)) {
+      problems.push({ key: 'SUPABASE_STORAGE_*', message: 'Supabase Storage requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_STORAGE_BUCKET' });
     }
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
       problems.push({ key: 'STRIPE_*', message: 'Stripe secret key and webhook secret are required for billing' });
@@ -138,6 +158,9 @@ export function collectConfigProblems(): ConfigProblem[] {
 
   if (appConfig.storageDriver === 's3' && (!appConfig.s3.bucket || !appConfig.s3.accessKeyId)) {
     problems.push({ key: 'S3_*', message: 'STORAGE_DRIVER=s3 requires S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY' });
+  }
+  if (appConfig.storageDriver === 'supabase' && (!appConfig.supabaseStorage.url || !appConfig.supabaseStorage.serviceRoleKey)) {
+    problems.push({ key: 'SUPABASE_STORAGE_*', message: 'STORAGE_DRIVER=supabase requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY' });
   }
 
   return problems;

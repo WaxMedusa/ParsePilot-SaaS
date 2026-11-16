@@ -4,6 +4,7 @@ import { ok } from '@/lib/http/respond';
 import { ApiError } from '@/lib/http/errors';
 import { prisma } from '@/lib/prisma';
 import { getStorage } from '@/lib/storage';
+import { appConfig } from '@/lib/env';
 import { retentionConfig } from '@/config/retention';
 
 export const runtime = 'nodejs';
@@ -31,7 +32,7 @@ export const POST = withInternalService(async (request, context) => {
       method: 'PUT',
       headers: { 'Content-Type': body.contentType },
       expiresInSeconds: retentionConfig.signedUrlSeconds * 4,
-      direct: process.env.STORAGE_DRIVER === 's3' ? 'presigned' : 'internal',
+      direct: appConfig.storageDriver !== 'local' ? 'presigned' : 'internal',
     },
     { requestId: context.requestId },
   );

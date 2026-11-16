@@ -64,6 +64,11 @@ class WebClient:
         return response.json().get("data")
 
     # --- jobs -------------------------------------------------------------
+    def next_job(self) -> str | None:
+        data = self._request("GET", "/api/v1/internal/jobs/next")
+        job_id = (data or {}).get("jobId")
+        return str(job_id) if job_id else None
+
     def claim_job(self, job_id: str, worker_id: str, correlation_id: str) -> dict[str, Any]:
         return self._request(
             "POST",

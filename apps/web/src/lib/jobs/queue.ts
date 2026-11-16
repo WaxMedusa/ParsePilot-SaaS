@@ -14,6 +14,11 @@ export async function enqueueJobRemotely(job: {
   correlationId: string;
   attempts: number;
 }): Promise<{ enqueued: boolean; error?: string }> {
+  // In database mode the durable PostgreSQL row is the queue. The worker polls
+  // `/api/v1/internal/jobs/next`, so there is no second broker to announce to.
+  if (appConfig.queueDriver === 'database') {
+    return { enqueued: true };
+  }
   const url = `${appConfig.processorUrl}/internal/jobs`;
   try {
     const response = await fetch(url, {
@@ -43,6 +48,7 @@ export async function enqueueJobRemotely(job: {
 
 /** Checks the processing service health without leaking credentials. */
 export async function checkProcessor(): Promise<{ ok: boolean; error?: string; latencyMs: number }> {
+  if (appConfig.queueDriver === 'database') return { ok: true, latencyMs: 0 };
   const started = Date.now();
   try {
     const response = await fetch(`${appConfig.processorUrl}/ready`, {

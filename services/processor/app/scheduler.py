@@ -1,7 +1,8 @@
 """Maintenance scheduler: `python -m app.scheduler`.
 
-Runs in its own container so a busy worker pool cannot delay retention or
-reconciliation. Both operations are idempotent and anchored by database rows.
+Runs in the worker daemon so retention and reconciliation happen on a fixed
+cadence. Both operations are idempotent and anchored by database rows, so the
+scheduler does not need a broker to deliver work.
 """
 
 from __future__ import annotations
@@ -9,8 +10,6 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-
-import redis
 
 from .config import get_settings
 from .logging import configure_logging, log
@@ -25,12 +24,6 @@ def main() -> int:
     if not settings.internal_token:
         log.error("scheduler_misconfigured", extra={"fields": {"reason": "INTERNAL_SERVICE_TOKEN is required"}})
         return 2
-
-    try:
-        redis.Redis.from_url(settings.redis_url, socket_connect_timeout=5).ping()
-    except redis.RedisError:
-        log.error("scheduler_redis_unavailable")
-        return 3
 
     client = WebClient()
     last_retention = 0.0

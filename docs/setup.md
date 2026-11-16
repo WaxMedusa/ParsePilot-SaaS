@@ -6,9 +6,9 @@
 | --- | --- | --- |
 | Node.js | 20.11+ | Next.js 15 and Prisma 6 |
 | npm | 10+ | workspaces; lockfile is committed |
-| Python | 3.12+ | FastAPI, RQ, PyMuPDF |
-| PostgreSQL | 16 | authoritative database |
-| Redis | 7 | queue and readiness |
+| Python | 3.12+ | worker, scheduler, PyMuPDF |
+| PostgreSQL | 16 | authoritative database and default queue |
+| Redis | 7 | optional legacy `QUEUE_DRIVER=redis` mode only |
 | Tesseract | 5.x | optional; OCR fallback only |
 | MinIO | optional | use `STORAGE_DRIVER=s3`; local disk is the default |
 
@@ -27,8 +27,9 @@ openssl rand -hex 32   # INTERNAL_SERVICE_TOKEN
 ```
 
 `DATABASE_URL` must point at PostgreSQL. For development storage, `STORAGE_DRIVER=local` writes under
-`STORAGE_LOCAL_ROOT` (gitignored). For MinIO, set `STORAGE_DRIVER=s3` and the `S3_*` values. The bucket must exist and
-must not be public.
+`STORAGE_LOCAL_ROOT` (gitignored). For MinIO, set `STORAGE_DRIVER=s3` and the `S3_*` values. For production without
+S3, set `STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_STORAGE_BUCKET`; the
+bucket must exist and must not be public. The Supabase service-role key is server-only.
 
 `src/lib/env.ts` validates production configuration and rejects placeholder secrets when `NODE_ENV=production`.
 
@@ -58,31 +59,30 @@ SEED_DEMO_PASSWORD='a-strong-local-password' npm run db:seed
 
 ## 4. Processes
 
-Four processes are required for full functionality:
+Three processes are required for full functionality in the default database-queue mode:
 
 ```bash
 npm run dev
-cd services/processor && .venv/bin/uvicorn app.main:app --reload --port 8000
 cd services/processor && .venv/bin/python -m app.worker
 cd services/processor && .venv/bin/python -m app.scheduler
 ```
 
 - Web is on <http://localhost:3000>.
-- The processor exposes `/health`, `/ready` and `/metrics`; enqueueing is `POST /internal/jobs` with
-  `x-internal-token`.
-- The worker consumes RQ jobs and drives document/export state through the web internal API.
-- The scheduler re-announces stalled jobs and runs the hourly retention sweep.
+- The worker polls `/api/v1/internal/jobs/next` and claims each job atomically; PostgreSQL is the queue.
+- The scheduler reconciles stalled jobs and runs the hourly retention sweep.
+- The FastAPI processor on port 8000 is only needed for the legacy Redis/RQ mode.
 
-Without Redis or the processor, the web UI still works but `/ready` reports degraded and uploads remain `queued` in
-PostgreSQL until a worker is available.
+Without a running worker, the web UI still works but uploads remain `queued` in PostgreSQL. Without Redis in the
+default mode, `/ready` remains healthy because PostgreSQL supplies the queue.
 
 ## 5. Verify
 
 ```bash
 curl -s http://localhost:3000/health
 curl -s http://localhost:3000/ready | jq
-curl -s http://localhost:8000/health
-curl -s http://localhost:8000/ready | jq
+# Legacy Redis/RQ mode only:
+# curl -s http://localhost:8000/health
+# curl -s http://localhost:8000/ready | jq
 ```
 
 Sign in, upload a PDF, and watch the status transition through the documented stages. If AI extraction is not
@@ -93,9 +93,9 @@ configured, the deterministic rules pipeline is used and a warning is recorded.
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `P1001` from Prisma | PostgreSQL not running / wrong URL | start PostgreSQL; check `DATABASE_URL` host and port |
-| Uploads stay `queued` | worker not running or Redis unreachable | start Redis and `python -m app.worker`; check `/ready` |
+| Uploads stay `queued` | worker not running or cannot reach the web internal API | start `python -m app.worker`; check `/ready` and the worker logs |
 | `ocr_unavailable` | Tesseract missing in worker image | install `tesseract-ocr` and `tesseract-ocr-eng` |
-| `/ready` 503 in production | Redis, processor or storage down | inspect the response `checks` object |
+| `/ready` 503 in production | database or storage down, or legacy Redis/processor down | inspect the response `checks` object |
 | Password reset has no email | no email provider configured | development returns a reset URL; production requires a provider |
 | Production start throws "Legal configuration incomplete" | legal launch gate | complete `src/config/legal.ts` (docs/legal-configuration.md) |
 
