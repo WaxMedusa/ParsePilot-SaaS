@@ -23,4 +23,11 @@ describe('public plan catalogue', () => {
       expect(plan.features.some((feature) => feature.includes(`${plan.maxUploadMb} MB max file size`))).toBe(true);
     }
   });
+
+  it('grants XLSX exports on every paid plan', () => {
+    for (const plan of PLAN_SEEDS) {
+      const advertisesXlsx = plan.features.some((feature) => /xlsx/i.test(feature));
+      expect(advertisesXlsx).toBe(plan.code !== 'free');
+    }
+  });
 });

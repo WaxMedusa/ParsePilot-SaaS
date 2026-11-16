@@ -103,6 +103,7 @@ export const PLAN_SEEDS: PlanSeed[] = [
       '25,000 pages per month',
       '4 MB max file size',
       '100 team seats',
+      'CSV and XLSX exports',
       'Data processing agreement',
     ],
     stripePriceIdEnv: 'STRIPE_PRICE_ENTERPRISE',
