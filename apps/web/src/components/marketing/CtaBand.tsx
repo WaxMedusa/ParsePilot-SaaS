@@ -19,8 +19,8 @@ export function CtaBand() {
           </h2>
           <div className={styles.actions}>
             <p className={styles.body}>
-              Upload a batch of invoices, watch the pipeline run, and export reviewed data as CSV or XLSX. The free plan
-              includes 100 pages — enough to judge the output on your own documents.
+              Upload a batch of invoices, watch the pipeline run, and export reviewed data as CSV — or XLSX on paid
+              plans. The free plan includes 100 pages — enough to judge the output on your own documents.
             </p>
             <ButtonLink href="/signup" variant="inverse" size="lg" iconAfter={<span aria-hidden="true">↗</span>}>
               Create your workspace
