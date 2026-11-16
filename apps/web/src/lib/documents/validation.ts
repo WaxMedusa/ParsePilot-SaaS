@@ -1,3 +1,4 @@
+import { PDFDocument } from 'pdf-lib';
 import { appConfig } from '../env';
 import { ApiError } from '../http/errors';
 
@@ -45,7 +46,7 @@ export function sanitizeFilename(name: string): string {
   return cleaned || 'document';
 }
 
-export type QuarantineInspection = { quarantined: boolean; reasons: string[]; pageEstimate: number | null };
+export type QuarantineInspection = { quarantined: boolean; reasons: string[] };
 
 /**
  * Lightweight pre-processing inspection. PDFs containing JavaScript, launch
@@ -56,7 +57,6 @@ export type QuarantineInspection = { quarantined: boolean; reasons: string[]; pa
  */
 export function inspectForActiveContent(bytes: Uint8Array, mime: SupportedMime): QuarantineInspection {
   const reasons: string[] = [];
-  let pageEstimate: number | null = null;
 
   if (mime === 'application/pdf') {
     const text = Buffer.from(bytes).toString('latin1');
@@ -66,11 +66,27 @@ export function inspectForActiveContent(bytes: Uint8Array, mime: SupportedMime):
     if (/\/EmbeddedFile\b/.test(text)) reasons.push('PDF contains embedded files');
     if (/\/XFA\b/.test(text)) reasons.push('PDF contains an XFA form');
     if (/\/Encrypt\b/.test(text)) reasons.push('PDF is encrypted');
-    const pageMatches = text.match(/\/Type\s*\/Page[^s]/g);
-    pageEstimate = pageMatches ? pageMatches.length : null;
   }
 
-  return { quarantined: reasons.length > 0, reasons, pageEstimate };
+  return { quarantined: reasons.length > 0, reasons };
+}
+
+/**
+ * Reads the real page tree instead of counting raw `/Type /Page` tokens. A
+ * regex misses compressed object streams and can undercount valid PDFs, which
+ * would let an upload bypass the plan page allowance.
+ */
+async function countPdfPages(bytes: Uint8Array): Promise<number> {
+  try {
+    const pdf = await PDFDocument.load(bytes, { updateMetadata: false });
+    const pages = pdf.getPageCount();
+    if (!Number.isInteger(pages) || pages < 1) throw new Error('empty_pdf');
+    return pages;
+  } catch {
+    throw ApiError.validation([
+      { path: 'file', message: 'This PDF could not be read. Upload a valid, unencrypted PDF.' },
+    ]);
+  }
 }
 
 export type ValidatedUpload = {
@@ -80,7 +96,7 @@ export type ValidatedUpload = {
   originalName: string;
   sizeBytes: number;
   checksumSha256: string;
-  pageEstimate: number | null;
+  pageCount: number;
 };
 
 export async function validateUploadFile(input: {
@@ -108,6 +124,8 @@ export async function validateUploadFile(input: {
     });
   }
 
+  const pageCount = mime === 'application/pdf' ? await countPdfPages(input.bytes) : 1;
+
   const { createHash } = await import('node:crypto');
   const checksumSha256 = createHash('sha256').update(input.bytes).digest('hex');
 
@@ -118,6 +136,6 @@ export async function validateUploadFile(input: {
     originalName: sanitizeFilename(input.filename),
     sizeBytes: input.bytes.byteLength,
     checksumSha256,
-    pageEstimate: inspection.pageEstimate,
+    pageCount,
   };
 }

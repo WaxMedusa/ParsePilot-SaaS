@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <ul className={styles.asideList}>
             <li>Native PDF text first, OCR only when needed</li>
             <li>Private storage with short-lived signed links</li>
-            <li>CSV and XLSX exports from reviewed data</li>
+            <li>CSV exports from reviewed data, with XLSX on paid plans</li>
           </ul>
         </div>
         <div className={styles.asideFoot}>

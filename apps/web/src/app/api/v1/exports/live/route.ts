@@ -1,5 +1,6 @@
 import { withApi } from '@/lib/http/handler';
 import { buildLiveExport } from '@/lib/exports/live';
+import { assertFormatAllowed } from '@/lib/exports/service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -8,6 +9,7 @@ const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreads
 
 export const GET = withApi(
   async (request, context) => {
+    await assertFormatAllowed(context.workspace!.id, 'xlsx');
     const result = await buildLiveExport(context.workspace!.id);
     const date = result.generatedAt.toISOString().slice(0, 10);
     return new Response(new Uint8Array(result.buffer), {

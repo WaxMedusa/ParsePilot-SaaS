@@ -9,8 +9,11 @@ import { logger } from '../logger';
  *    completion. Retries of the same job never charge again (ledger key per job).
  *  - A manual reprocess creates a new job and therefore a new page charge,
  *    because the document is processed again.
- *  - Uploads are rejected before queueing when the plan's remaining pages or
- *    file-size limit would be exceeded.
+ *  - Uploads are rejected before storage when the exact PDF page count or the
+ *    plan's file-size limit would be exceeded.
+ *  - Completion rechecks the actual processed page count under a workspace
+ *    lock before writing the ledger, so an inaccurate worker result cannot
+ *    overrun the allowance.
  *  - Failed jobs that never produce an extraction are not charged.
  */
 
@@ -60,12 +63,51 @@ export async function recordPagesUsage(
   input: { workspaceId: string; documentId: string; jobId: string; pages: number },
 ): Promise<{ charged: boolean }> {
   const pages = Math.max(1, Math.min(Math.trunc(input.pages), 5_000));
+  const idempotencyKey = `usage:job:${input.jobId}`;
+
+  // Serialise page accounting per workspace. Upload-time counts are exact, but
+  // a reprocess or a worker result can still race another job; the lock makes
+  // the remaining-quota check and ledger insert one decision.
+  await tx.$queryRaw`SELECT "id" FROM "Workspace" WHERE "id" = ${input.workspaceId}::uuid FOR UPDATE`;
+
+  const existing = await tx.usageLedger.findUnique({
+    where: { idempotencyKey },
+    select: { id: true },
+  });
+  if (existing) return { charged: false };
+
   const subscription = await tx.subscription.findUnique({ where: { workspaceId: input.workspaceId } });
   const range = usagePeriodRange(subscription);
+  const workspace = await tx.workspace.findUnique({
+    where: { id: input.workspaceId },
+    select: { planCode: true, deletedAt: true },
+  });
+  if (!workspace || workspace.deletedAt) throw ApiError.notFound('Workspace not found');
+  const plan = await tx.plan.findUnique({
+    where: { code: workspace.planCode },
+    select: { monthlyPageLimit: true },
+  });
+  if (!plan) throw ApiError.internal('Plan configuration missing');
+
+  const used = await tx.usageLedger.aggregate({
+    where: {
+      workspaceId: input.workspaceId,
+      kind: 'processing_pages',
+      occurredAt: { gte: range.start, lt: range.end },
+    },
+    _sum: { quantity: true },
+  });
+  const pagesUsed = used._sum.quantity ?? 0;
+  if (pagesUsed + pages > plan.monthlyPageLimit) {
+    throw ApiError.quotaExceeded(
+      'This document would exceed your plan page quota. Upgrade or wait for the next period.',
+      { pages, pagesUsed, pageLimit: plan.monthlyPageLimit },
+    );
+  }
 
   const inserted = await tx.$executeRaw`
     INSERT INTO "UsageLedger" ("id", "workspaceId", "documentId", "kind", "quantity", "idempotencyKey", "reason", "occurredAt", "createdAt")
-    VALUES (gen_random_uuid(), ${input.workspaceId}::uuid, ${input.documentId}::uuid, 'processing_pages'::"UsageLedgerKind", ${pages}, ${`usage:job:${input.jobId}`}, 'document_processing', now(), now())
+    VALUES (gen_random_uuid(), ${input.workspaceId}::uuid, ${input.documentId}::uuid, 'processing_pages'::"UsageLedgerKind", ${pages}, ${idempotencyKey}, 'document_processing', now(), now())
     ON CONFLICT ("idempotencyKey") DO NOTHING
   `;
   if (inserted === 0) return { charged: false };

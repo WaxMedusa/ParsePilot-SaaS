@@ -147,10 +147,20 @@ export function ExportsPanel({
             to regenerate.
           </p>
           <div className={styles.actions} style={{ marginTop: 14 }}>
-            <Button variant="secondary" icon={<FileSpreadsheet />} onClick={downloadLive} disabled={busy !== null}>
+            <Button
+              variant="secondary"
+              icon={<FileSpreadsheet />}
+              onClick={downloadLive}
+              disabled={busy !== null || !xlsxAllowed}
+              title={xlsxAllowed ? undefined : 'XLSX exports are included on Starter and above.'}
+            >
               {busy === 'live' ? 'Building workbook…' : 'Download live XLSX'}
             </Button>
-            <span className={styles.hint}>Updates with the workspace · includes edited values</span>
+            <span className={styles.hint}>
+              {xlsxAllowed
+                ? 'Updates with the workspace · includes edited values'
+                : 'XLSX is included on Starter and above · CSV is available on every plan'}
+            </span>
           </div>
         </div>
       </section>
@@ -175,12 +185,12 @@ export function ExportsPanel({
                 icon={<FileSpreadsheet />}
                 onClick={() => create('xlsx')}
                 disabled={busy !== null || !xlsxAllowed}
-                title={xlsxAllowed ? undefined : 'Snapshot XLSX is not included in the free plan; live XLSX is available above.'}
+                title={xlsxAllowed ? undefined : 'XLSX exports are included on Starter and above.'}
               >
                 {busy === 'xlsx' ? 'Queuing…' : 'New XLSX snapshot'}
               </Button>
               {!xlsxAllowed ? (
-                <span className={styles.hint}>Snapshot XLSX is not included in your current plan. Live XLSX is available above.</span>
+                <span className={styles.hint}>XLSX exports are included on Starter and above. CSV is available on every plan.</span>
               ) : null}
             </div>
           ) : (
@@ -203,7 +213,11 @@ export function ExportsPanel({
               <Download size={16} />
             </span>
             <p className={styles.emptyTitle}>No exports yet</p>
-            <p className={styles.emptyBody}>Download the live XLSX above for the current data, or create a CSV snapshot with the full field set, including corrections.</p>
+            <p className={styles.emptyBody}>
+              {xlsxAllowed
+                ? 'Download the live XLSX above for the current data, or create a CSV snapshot with the full field set, including corrections.'
+                : 'Create a CSV snapshot with the full field set, including corrections. XLSX exports are included on Starter and above.'}
+            </p>
           </div>
         ) : (
           <div className={styles.tableWrap}>

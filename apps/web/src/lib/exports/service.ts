@@ -29,6 +29,17 @@ export const EXPORT_BASE_COLUMNS = [
 
 export type ExportRow = Record<string, string | number | null>;
 
+/** Shared format gate for snapshot and live exports. */
+export async function assertFormatAllowed(workspaceId: string, format: 'csv' | 'xlsx'): Promise<void> {
+  const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { planCode: true } });
+  if (!workspace) throw ApiError.notFound('Workspace not found');
+  const plan = await prisma.plan.findUnique({ where: { code: workspace.planCode } });
+  if (!plan) throw ApiError.internal('Plan configuration missing');
+  if (!planSupportsFormat(plan, format)) {
+    throw ApiError.forbidden(`${format.toUpperCase()} exports are not included in your plan`);
+  }
+}
+
 export async function createExport(input: {
   workspaceId: string;
   userId: string;
@@ -36,13 +47,7 @@ export async function createExport(input: {
   filters?: Record<string, unknown>;
   correlationId: string;
 }) {
-  const workspace = await prisma.workspace.findUnique({ where: { id: input.workspaceId }, select: { planCode: true } });
-  if (!workspace) throw ApiError.notFound('Workspace not found');
-  const plan = await prisma.plan.findUnique({ where: { code: workspace.planCode } });
-  if (!plan) throw ApiError.internal('Plan configuration missing');
-  if (!planSupportsFormat(plan, input.format)) {
-    throw ApiError.forbidden(`${input.format.toUpperCase()} exports are not included in your plan`);
-  }
+  await assertFormatAllowed(input.workspaceId, input.format);
 
   const exportRecord = await prisma.export.create({
     data: {

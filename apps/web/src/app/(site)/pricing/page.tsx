@@ -7,7 +7,7 @@ import styles from './PricingPage.module.css';
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: 'ParsePilot plans by monthly page volume, file size and export formats. Page limits enforced server-side.',
+  description: 'ParsePilot plans by monthly page volume, file size and export formats. Plan limits enforced server-side.',
 };
 
 export const revalidate = 300;

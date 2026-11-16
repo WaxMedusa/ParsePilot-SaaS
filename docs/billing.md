@@ -5,8 +5,13 @@
 The `Plan` table is authoritative. The UI never decides limits. `getUsageSnapshot()` and `assertCanProcess()` read the
 workspace plan, subscription status and current usage, and reject work before storage when a limit would be exceeded.
 
-Entitlements include monthly pages, maximum upload size, workspace count and member count. XLSX exports are gated by
-the plan feature list; CSV is available on every plan.
+Entitlements include monthly pages, maximum upload size and member count. XLSX exports are gated by the plan feature
+list for both live and snapshot exports; CSV is available on every plan. `maxWorkspaces` remains an internal database
+field but is not a public entitlement because it is not enforced.
+
+Uploads are capped at 4 MB because production requests pass through a Vercel Function, which rejects bodies above
+roughly 4.5 MB before application validation. Raising the advertised size requires direct-to-storage uploads or a
+host without that request-body limit.
 
 Plan prices are stored in integer cents (`priceCents`), never floats. Stripe price IDs come from environment variables
 and are written into the plan seed.
@@ -18,6 +23,8 @@ and are written into the plan seed.
   double charge.
 - A manual reprocess creates a new job and may count again, because the document is genuinely processed again.
 - Jobs that never produce an extraction are not charged.
+- Uploads use the PDF page tree, not a regex, to count pages before storage. The worker's actual page count is checked
+  again against the remaining allowance under a workspace row lock before the ledger is written.
 - `UsagePeriod` counters are updated in the same transaction as the ledger entry and reconciled from the ledger for
   display.
 

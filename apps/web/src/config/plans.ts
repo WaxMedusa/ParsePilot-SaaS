@@ -5,6 +5,11 @@
  * the frontend never decides what a plan allows. This file only defines the
  * catalogue that `npm run db:seed` writes into PostgreSQL, so pricing and
  * limits can be changed without a code deploy in the future.
+ *
+ * `maxUploadMb` is capped at 4 MB because Vercel Functions reject request
+ * bodies above roughly 4.5 MB before the application can validate them. A
+ * larger advertised limit would be a claim the production platform cannot
+ * honour; moving to direct-to-storage uploads is required before raising it.
  */
 
 export type PlanSeed = {
@@ -31,12 +36,12 @@ export const PLAN_SEEDS: PlanSeed[] = [
     priceCents: 0,
     currency: 'USD',
     monthlyPageLimit: 100,
-    maxUploadMb: 10,
+    maxUploadMb: 4,
     maxWorkspaces: 1,
     maxMembers: 2,
     features: [
       '100 pages per month',
-      '10 MB max file size',
+      '4 MB max file size',
       '2 team seats',
       'CSV exports',
     ],
@@ -51,12 +56,12 @@ export const PLAN_SEEDS: PlanSeed[] = [
     priceCents: 4900,
     currency: 'USD',
     monthlyPageLimit: 1500,
-    maxUploadMb: 25,
+    maxUploadMb: 4,
     maxWorkspaces: 1,
     maxMembers: 5,
     features: [
       '1,500 pages per month',
-      '25 MB max file size',
+      '4 MB max file size',
       '5 team seats',
       'CSV and XLSX exports',
     ],
@@ -71,12 +76,12 @@ export const PLAN_SEEDS: PlanSeed[] = [
     priceCents: 14900,
     currency: 'USD',
     monthlyPageLimit: 6000,
-    maxUploadMb: 50,
+    maxUploadMb: 4,
     maxWorkspaces: 3,
     maxMembers: 20,
     features: [
       '6,000 pages per month',
-      '50 MB max file size',
+      '4 MB max file size',
       '20 team seats',
       'CSV and XLSX exports',
     ],
@@ -91,12 +96,12 @@ export const PLAN_SEEDS: PlanSeed[] = [
     priceCents: 0,
     currency: 'USD',
     monthlyPageLimit: 25000,
-    maxUploadMb: 100,
+    maxUploadMb: 4,
     maxWorkspaces: 10,
     maxMembers: 100,
     features: [
       '25,000 pages per month',
-      '100 MB max file size',
+      '4 MB max file size',
       '100 team seats',
       'Data processing agreement',
     ],

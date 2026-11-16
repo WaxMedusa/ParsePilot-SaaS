@@ -142,7 +142,7 @@ this with a new owner-authored commit rather than rewriting already-pushed histo
 - Use a managed PostgreSQL with automated backups and PITR; managed Redis with persistence; S3 with SSE and versioning.
 - Store secrets in a secret manager, not in a committed `.env`.
 - Set `APP_URL` and `NEXT_PUBLIC_APP_URL` to the public HTTPS origin. Stripe redirects and signed URLs depend on them.
-- Set `MAX_UPLOAD_MB` consistently with the reverse-proxy body limit (proxy limit must be equal or greater).
+- Set `MAX_UPLOAD_MB` consistently with the reverse-proxy body limit (proxy limit must be equal or greater). On Vercel, keep it at `4`: Function request bodies above roughly 4.5 MB are rejected before the app runs. Larger uploads require direct-to-storage uploads or a different host.
 - Configure the Stripe webhook endpoint at `https://<host>/api/v1/webhooks/stripe` for
   `checkout.session.completed`, `customer.subscription.created|updated|deleted` and `invoice.payment_failed`.
   Signature verification uses the raw request body; do not put a body-rewriting proxy in front of it.

@@ -23,7 +23,11 @@ export default async function ExportsPage() {
       <PageHeader
         eyebrow="Data out"
         title="Exports"
-        description="Download the always-current XLSX workbook, or create an expiring CSV/XLSX snapshot built by the background worker."
+        description={
+          xlsxAllowed
+            ? 'Download the always-current XLSX workbook, or create an expiring CSV/XLSX snapshot built by the background worker.'
+            : 'Create an expiring CSV snapshot built by the background worker. XLSX exports are included on Starter and above.'
+        }
       />
       <ExportsPanel
         workspaceId={auth.workspace.id}

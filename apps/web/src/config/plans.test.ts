@@ -16,4 +16,11 @@ describe('public plan catalogue', () => {
       expect(plan.features.some((feature) => feature.includes(`${plan.maxMembers} team seats`))).toBe(true);
     }
   });
+
+  it('does not advertise upload sizes above the production platform ceiling', () => {
+    for (const plan of PLAN_SEEDS) {
+      expect(plan.maxUploadMb).toBeLessThanOrEqual(4);
+      expect(plan.features.some((feature) => feature.includes(`${plan.maxUploadMb} MB max file size`))).toBe(true);
+    }
+  });
 });

@@ -47,8 +47,7 @@ export async function createDocumentFromUpload(input: {
   });
 
   // Quota and subscription checks happen before any object is written.
-  const estimatedPages = Math.max(1, validated.pageEstimate ?? 1);
-  await assertCanProcess(input.workspaceId, estimatedPages);
+  await assertCanProcess(input.workspaceId, validated.pageCount);
 
   const storage = getStorage();
   const storageKey = generateStorageKey(input.workspaceId, validated.extension);
@@ -88,7 +87,7 @@ export async function createDocumentFromUpload(input: {
         detectedMimeType: validated.mime,
         sizeBytes: validated.sizeBytes,
         checksumSha256: validated.checksumSha256,
-        pageCount: validated.pageEstimate,
+        pageCount: validated.pageCount,
         status: 'uploaded',
         kind: 'unknown',
         duplicateOfId: duplicate?.id ?? null,
@@ -120,7 +119,7 @@ export async function createDocumentFromUpload(input: {
       targetId: document.id,
       ipHash: input.ipHash,
       requestId: input.correlationId,
-      metadata: { sizeBytes: validated.sizeBytes, mime: validated.mime, pages: validated.pageEstimate },
+      metadata: { sizeBytes: validated.sizeBytes, mime: validated.mime, pages: validated.pageCount },
     });
     await increment('documents_uploaded');
     await observe('upload_duration', Date.now() - startedAt);
