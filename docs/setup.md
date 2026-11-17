@@ -30,6 +30,9 @@ openssl rand -hex 32   # INTERNAL_SERVICE_TOKEN
 `STORAGE_LOCAL_ROOT` (gitignored). For MinIO, set `OBJECT_STORAGE_DRIVER=s3` and the `S3_*` values. For production
 without S3, set `OBJECT_STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and
 `SUPABASE_STORAGE_BUCKET`; the bucket must exist and must not be public. The Supabase service-role key is server-only.
+The bucket's allowed MIME types must include the uploads plus generated artefacts: `text/csv`,
+`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` and `application/json`. Otherwise uploads succeed
+but exports fail at the storage step.
 `STORAGE_DRIVER` remains accepted for Docker Compose, but do not set it on Vercel because Buildah reserves that name.
 
 `src/lib/env.ts` validates production configuration and rejects placeholder secrets when `NODE_ENV=production`.
@@ -100,6 +103,7 @@ configured, the deterministic rules pipeline is used and a warning is recorded.
 | `P1001` from Prisma | PostgreSQL not running / wrong URL | start PostgreSQL; check `DATABASE_URL` host and port |
 | Uploads stay `queued` | worker not running or cannot reach the web internal API | start `python -m app.worker`; check `/ready` and the worker logs |
 | `ocr_unavailable` | Tesseract missing in worker image | install `tesseract-ocr` and `tesseract-ocr-eng` |
+| Exports fail with `export_upload_failed` | bucket MIME allow-list excludes CSV/XLSX/JSON | add those types to the Supabase Storage bucket |
 | `/ready` 503 in production | database or storage down, or legacy Redis/processor down | inspect the response `checks` object |
 | Password reset has no email | no email provider configured | set `EMAIL_PROVIDER`, `EMAIL_FROM` and the provider API key; development shows a one-time reset URL |
 | Production start throws "Legal configuration incomplete" | legal launch gate | complete `src/config/legal.ts` (docs/legal-configuration.md) |

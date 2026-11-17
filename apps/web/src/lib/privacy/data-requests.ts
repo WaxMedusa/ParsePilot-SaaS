@@ -4,6 +4,7 @@ import { recordAudit } from '../audit';
 import { retentionConfig } from '../../config/retention';
 import { verifyPassword } from '../auth/password';
 import { revokeAllUserSessions } from '../auth/session';
+import { createJob } from '../jobs/service';
 import { logger } from '../logger';
 
 /**
@@ -11,6 +12,61 @@ import { logger } from '../logger';
  * statuses; deletion executes after a documented grace period through the
  * retention worker, never synchronously inside the request.
  */
+
+/**
+ * Kick the retention worker as soon as an export is requested. The hourly
+ * sweep remains the safety net, but a user should not wait up to an hour for
+ * a small JSON artefact. `retention_sweep` already runs idempotently and owns
+ * the data-request state transitions. If a sweep is already running its
+ * `activeKey` returns that job instead of starting another, so the export is
+ * picked up by the follow-up sweep described below.
+ */
+async function enqueueDataExport(requestId: string, workspaceId: string | null, userId: string) {
+  let anchorWorkspaceId = workspaceId;
+  if (!anchorWorkspaceId) {
+    const membership = await prisma.workspaceMember.findFirst({
+      where: { userId, workspace: { deletedAt: null } },
+      orderBy: { createdAt: 'asc' },
+      select: { workspaceId: true },
+    });
+    anchorWorkspaceId = membership?.workspaceId ?? null;
+  }
+  if (!anchorWorkspaceId) return;
+
+  try {
+    await createJob({
+      workspaceId: anchorWorkspaceId,
+      type: 'retention_sweep',
+      idempotencyKey: `privacy-export:${requestId}`,
+      correlationId: `privacy-export:${requestId}`,
+      maxAttempts: 3,
+      onActiveConflict: 'return_existing',
+    });
+  } catch (error) {
+    // The durable request row remains pending and the hourly sweep retries it.
+    logger.warn('data_export_enqueue_failed', {
+      requestId,
+      message: error instanceof Error ? error.message : 'unknown',
+    });
+  }
+}
+
+/**
+ * Enqueue a fresh sweep once a running sweep has finished, because a request
+ * created while it was running was not in its pending query and could not
+ * start a second job. Safe to call when nothing is pending.
+ */
+export async function resumePendingDataExports(): Promise<void> {
+  const pending = await prisma.dataRequest.findMany({
+    where: { type: 'account_export', status: 'pending' },
+    orderBy: { createdAt: 'asc' },
+    take: 20,
+    select: { id: true, workspaceId: true, userId: true },
+  });
+  for (const request of pending) {
+    await enqueueDataExport(request.id, request.workspaceId, request.userId);
+  }
+}
 
 export async function createAccountExportRequest(userId: string, workspaceId: string | null) {
   const pending = await prisma.dataRequest.findFirst({
@@ -22,6 +78,7 @@ export async function createAccountExportRequest(userId: string, workspaceId: st
     data: { userId, workspaceId, type: 'account_export', status: 'pending' },
   });
   await recordAudit({ action: 'privacy.data_export_requested', workspaceId, actorId: userId, targetType: 'data_request', targetId: request.id });
+  await enqueueDataExport(request.id, workspaceId, userId);
   return request;
 }
 
@@ -34,6 +91,7 @@ export async function createWorkspaceExportRequest(userId: string, workspaceId: 
     data: { userId, workspaceId, type: 'account_export', status: 'pending', notes: 'Workspace data export' },
   });
   await recordAudit({ action: 'privacy.data_export_requested', workspaceId, actorId: userId, targetType: 'data_request', targetId: request.id });
+  await enqueueDataExport(request.id, workspaceId, userId);
   return request;
 }
 

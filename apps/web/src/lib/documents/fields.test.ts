@@ -60,4 +60,18 @@ describe('extraction validation', () => {
     expect(result.totalsConsistent).toBe(true);
     expect(result.requiresReview).toBe(false);
   });
+
+  it('flags missing accounting context and line items that do not add up', () => {
+    const result = validateExtraction([
+      { key: 'vendor_name', value: 'Acme', confidence: 0.9 },
+      { key: 'subtotal', value: '100.00', confidence: 0.9 },
+      { key: 'total_amount', value: '100.00', confidence: 0.9 },
+      { key: 'line_items', value: '[{"description":"A","amount":"80.00"}]', confidence: 0.8 },
+    ]);
+
+    expect(result.requiresReview).toBe(true);
+    expect(result.issues.join(' ')).toContain('Issue date is missing');
+    expect(result.issues.join(' ')).toContain('Currency is missing');
+    expect(result.issues.join(' ')).toContain('line items do not add up to subtotal');
+  });
 });

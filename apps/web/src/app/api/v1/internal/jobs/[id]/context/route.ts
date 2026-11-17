@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getStorage } from '@/lib/storage';
 import { jobSummary } from '@/lib/jobs/service';
 import { appConfig } from '@/lib/env';
+import { resolveAiConfig } from '@/lib/ai/settings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,10 +51,15 @@ export const GET = withInternalService(async (request, context) => {
     };
   }
 
+  // Only the processor (authenticated with INTERNAL_SERVICE_TOKEN) receives
+  // the decrypted workspace key, so it can use the account's own provider.
+  const ai = job.document ? await resolveAiConfig(job.workspaceId) : null;
+
   return ok(
     {
       job: jobSummary(job),
       document: documentContext,
+      ai,
       export: job.export ? { id: job.export.id, format: job.export.format } : null,
       limits: {
         maxPagesPerDocument: 200,

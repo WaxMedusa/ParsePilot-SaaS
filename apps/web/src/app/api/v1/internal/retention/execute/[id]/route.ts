@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { claimJob } from '@/lib/jobs/service';
 import { runRetentionSweep } from '@/lib/retention/service';
 import { failJob } from '@/lib/jobs/service';
+import { resumePendingDataExports } from '@/lib/privacy/data-requests';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,9 @@ export const POST = withInternalService(async (request, context) => {
         timings: { durationMs: 0, documentsPurged: summary.documentsPurged } as never,
       },
     });
+    // Requests created while this sweep was running could not start a job of
+    // their own; now that the active slot is free, start one for them.
+    await resumePendingDataExports();
     return ok({ executed: true, summary }, { requestId: context.requestId });
   } catch (error) {
     await failJob(jobId, body.workerId, {

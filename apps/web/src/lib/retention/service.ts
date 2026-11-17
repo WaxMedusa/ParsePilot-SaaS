@@ -317,8 +317,11 @@ async function deleteAccount(request: { id: string; userId: string }): Promise<b
 }
 
 async function processDataRequests(summary: RetentionSummary) {
+  // No minimum age: an export-triggered sweep is expected to pick up the
+  // request that was committed before the sweep job was created. Deletion
+  // requests are still protected by their own grace-period check.
   const requests = await prisma.dataRequest.findMany({
-    where: { status: { in: ['pending', 'processing'] }, createdAt: { lt: new Date(Date.now() - 30_000) } },
+    where: { status: { in: ['pending', 'processing'] } },
     orderBy: { createdAt: 'asc' },
     take: 10,
   });

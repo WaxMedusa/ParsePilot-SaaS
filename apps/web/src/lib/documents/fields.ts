@@ -208,7 +208,7 @@ export type ExtractionValidation = {
   totalsConsistent: boolean | null;
 };
 
-const REQUIRED_FOR_REVIEW: string[] = ['vendor_name', 'total_amount'];
+const REQUIRED_FOR_REVIEW: string[] = ['vendor_name', 'issue_date', 'total_amount', 'currency'];
 
 export function normalizeFieldValue(definition: FieldDefinition | undefined, raw: string | null): { value: string | null; issue?: string } {
   if (raw === null || raw === undefined || raw.trim() === '') return { value: null };
@@ -267,7 +267,34 @@ export function validateExtraction(fields: IncomingField[]): ExtractionValidatio
     totalsConsistent = Math.abs(subtotal + tax - total) <= 2;
     if (!totalsConsistent) issues.push('subtotal + tax_amount does not equal total_amount');
   }
+  if (total !== null && total >= 0) {
+    if (subtotal !== null && subtotal > total + 2) issues.push('subtotal exceeds total_amount');
+    if (tax !== null && tax > total + 2) issues.push('tax_amount exceeds total_amount');
+  }
   if (total !== null && total < 0) issues.push('total_amount is negative');
+
+  const amountPaid = decimalToCents(valueOf('amount_paid'));
+  if (amountPaid !== null && total !== null && amountPaid > total + 2) {
+    issues.push('amount_paid exceeds total_amount');
+  }
+
+  const lineItemsRaw = valueOf('line_items');
+  if (lineItemsRaw) {
+    try {
+      const parsed = JSON.parse(lineItemsRaw);
+      if (Array.isArray(parsed)) {
+        const lineTotal = parsed.reduce((sum, item) => {
+          const amount = item && typeof item === 'object' ? decimalToCents(String((item as { amount?: unknown }).amount ?? '')) : null;
+          return amount === null ? sum : sum + amount;
+        }, 0);
+        if (subtotal !== null && Math.abs(lineTotal - subtotal) > 2) {
+          issues.push('line items do not add up to subtotal');
+        }
+      }
+    } catch {
+      issues.push('line_items is not valid JSON');
+    }
+  }
 
   for (const key of REQUIRED_FOR_REVIEW) {
     if (!valueOf(key)) issues.push(`${fieldLabel(key)} is missing`);

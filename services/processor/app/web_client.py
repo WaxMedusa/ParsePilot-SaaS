@@ -21,6 +21,50 @@ class WebServiceError(RuntimeError):
         self.message = message
 
 
+class StorageTransferError(RuntimeError):
+    """A signed upload/download failed, with safe diagnostics for the UI."""
+
+    def __init__(
+        self,
+        operation: str,
+        message: str,
+        *,
+        status_code: int | None = None,
+        category: str = "transient",
+    ) -> None:
+        super().__init__(message)
+        self.operation = operation
+        self.message = message
+        self.status_code = status_code
+        self.category = category
+
+
+def _response_detail(response: httpx.Response) -> str:
+    """Returns a short provider message without logging the whole body."""
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = None
+    if isinstance(payload, dict):
+        for key in ("message", "error", "error_description"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()[:240]
+            if isinstance(value, dict):
+                nested = value.get("message") or value.get("code")
+                if isinstance(nested, str) and nested.strip():
+                    return nested.strip()[:240]
+    return (response.text or "").strip()[:240]
+
+
+def _transfer_category(status_code: int) -> str:
+    if status_code == 429:
+        return "transient"
+    if 400 <= status_code < 500:
+        return "permanent"
+    return "transient"
+
+
 class WebClient:
     def __init__(self, base_url: str | None = None, token: str | None = None, timeout: float = 30.0) -> None:
         settings = get_settings()
@@ -148,13 +192,53 @@ class WebClient:
         )
 
     def download(self, url: str) -> bytes:
-        """Fetches a signed or internal URL. Redirects are not followed."""
-        with httpx.Client(timeout=httpx.Timeout(120.0, connect=10.0), follow_redirects=False) as client:
-            response = client.get(url)
-            response.raise_for_status()
-            return response.content
+        """Fetches a signed or internal URL. Storage redirects are followed."""
+        try:
+            with httpx.Client(timeout=httpx.Timeout(120.0, connect=10.0), follow_redirects=True) as client:
+                response = client.get(url)
+        except httpx.TimeoutException as error:
+            raise StorageTransferError(
+                "download",
+                "The stored document could not be downloaded before the timeout.",
+                category="timeout",
+            ) from error
+        except httpx.HTTPError as error:
+            raise StorageTransferError(
+                "download",
+                "The stored document could not be downloaded.",
+            ) from error
+        if response.status_code >= 400:
+            detail = _response_detail(response)
+            raise StorageTransferError(
+                "download",
+                f"The stored document could not be downloaded (storage returned {response.status_code}"
+                f"{f': {detail}' if detail else ''}).",
+                status_code=response.status_code,
+                category=_transfer_category(response.status_code),
+            )
+        return response.content
 
-    def upload(self, url: str, content: bytes, content_type: str) -> None:
-        with httpx.Client(timeout=httpx.Timeout(120.0, connect=10.0), follow_redirects=False) as client:
-            response = client.put(url, content=content, headers={"content-type": content_type})
-            response.raise_for_status()
+    def upload(self, url: str, content: bytes, headers: dict[str, str]) -> None:
+        try:
+            with httpx.Client(timeout=httpx.Timeout(120.0, connect=10.0), follow_redirects=True) as client:
+                response = client.put(url, content=content, headers=headers)
+        except httpx.TimeoutException as error:
+            raise StorageTransferError(
+                "upload",
+                "The export could not be uploaded to storage before the timeout.",
+                category="timeout",
+            ) from error
+        except httpx.HTTPError as error:
+            raise StorageTransferError(
+                "upload",
+                "The export could not be uploaded to storage.",
+            ) from error
+        if response.status_code >= 400:
+            detail = _response_detail(response)
+            raise StorageTransferError(
+                "upload",
+                f"The export could not be uploaded to storage (storage returned {response.status_code}"
+                f"{f': {detail}' if detail else ''}).",
+                status_code=response.status_code,
+                category=_transfer_category(response.status_code),
+            )

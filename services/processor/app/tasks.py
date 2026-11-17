@@ -14,13 +14,13 @@ from typing import Any
 
 import httpx
 
-from .config import get_settings
+from .config import ai_config_from_context, get_settings
 from .logging import configure_logging, log
 from .pipeline.export import build_export
 from .pipeline.extract import extract
 from .pipeline.text import PipelineError, extract_text
 from .pipeline.validate import validate
-from .web_client import WebClient, WebServiceError
+from .web_client import StorageTransferError, WebClient, WebServiceError
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +39,9 @@ def _failure_from(error: BaseException) -> tuple[str, str, str]:
     if isinstance(error, WebServiceError):
         category = "transient" if error.status_code >= 500 or error.status_code == 429 else "permanent"
         return f"web_{error.code}"[:80], error.message[:1000], category
+    if isinstance(error, StorageTransferError):
+        code = "export_upload_failed" if error.operation == "upload" else "download_failed"
+        return code, error.message[:1000], error.category
     if isinstance(error, httpx.TimeoutException):
         return "download_timeout", "The document could not be downloaded before the timeout.", "timeout"
     if isinstance(error, httpx.HTTPError):
@@ -49,6 +52,7 @@ def _failure_from(error: BaseException) -> tuple[str, str, str]:
 def process_document(client: WebClient, job_id: str, context: dict[str, Any], correlation_id: str) -> None:
     settings = get_settings()
     worker_id = settings.worker_id
+    ai = ai_config_from_context(context.get("ai"))
     document = context.get("document")
     if not document:
         raise PipelineError("document_missing", "The job has no document attached.")
@@ -79,7 +83,7 @@ def process_document(client: WebClient, job_id: str, context: dict[str, Any], co
             "No readable text could be extracted. The scan may be blank or too low quality for OCR.",
         )
 
-    fields, kind, language, warnings, model = extract(text)
+    fields, kind, language, warnings, model = extract(text, ai)
 
     stage("validating")
     validation_warnings, requires_review = validate(fields)
@@ -145,7 +149,9 @@ def generate_export(client: WebClient, job_id: str, context: dict[str, Any], cor
 
     content, content_type = build_export(dataset.get("format") or export.get("format") or "csv", columns, rows)
     target = client.export_upload_target(export["id"], content_type, correlation_id)
-    client.upload(target["uploadUrl"], content, target.get("headers", {}).get("Content-Type", content_type))
+    headers = {str(key): str(value) for key, value in (target.get("headers") or {}).items()}
+    headers.setdefault("Content-Type", content_type)
+    client.upload(target["uploadUrl"], content, headers)
     client.complete_export(
         export["id"],
         settings.worker_id,

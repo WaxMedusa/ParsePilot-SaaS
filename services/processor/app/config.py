@@ -68,6 +68,15 @@ class Settings:
     poll_interval_seconds: int
 
 
+@dataclass(frozen=True)
+class AiConfig:
+    """Provider credentials for one extraction (a workspace override or the deployment default)."""
+
+    api_key: str
+    base_url: str
+    model: str
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     hostname = os.getenv("HOSTNAME", "processor")
@@ -93,4 +102,28 @@ def get_settings() -> Settings:
         scheduler_interval_seconds=_int_env("PROCESSOR_SCHEDULER_INTERVAL_SECONDS", 3600),
         reconcile_interval_seconds=_int_env("PROCESSOR_RECONCILE_INTERVAL_SECONDS", 300),
         poll_interval_seconds=_int_env("PROCESSOR_POLL_INTERVAL_SECONDS", 5),
+    )
+
+
+def ai_config_from_context(payload: object) -> AiConfig | None:
+    """Reads the optional per-workspace provider config from a job context.
+
+    None means no workspace override, so the deployment default applies. An
+    override with an empty key means the workspace turned AI review off (or its
+    key cannot be read), and the deployment key must not be used instead.
+    """
+    if not isinstance(payload, dict):
+        return None
+    api_key = payload.get("apiKey")
+    settings = get_settings()
+    base_url = payload.get("baseUrl")
+    model = payload.get("model")
+    return AiConfig(
+        api_key=api_key.strip() if isinstance(api_key, str) else "",
+        base_url=(
+            base_url.strip().rstrip("/")
+            if isinstance(base_url, str) and base_url.strip()
+            else settings.ai_base_url
+        ),
+        model=(model.strip() if isinstance(model, str) and model.strip() else settings.ai_model),
     )

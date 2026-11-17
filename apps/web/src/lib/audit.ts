@@ -21,6 +21,8 @@ export type AuditAction =
   | 'workspace.invitation_accepted'
   | 'workspace.member_role_changed'
   | 'workspace.member_removed'
+  | 'settings.ai_updated'
+  | 'settings.ai_cleared'
   | 'document.uploaded'
   | 'document.viewed'
   | 'document.updated'

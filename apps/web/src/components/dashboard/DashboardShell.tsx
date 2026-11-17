@@ -23,6 +23,7 @@ const SETTINGS_NAV = [
   { href: '/dashboard/settings/billing', label: 'Billing', index: '07' },
   { href: '/dashboard/settings/team', label: 'Team', index: '08' },
   { href: '/dashboard/settings/privacy', label: 'Privacy & data', index: '09' },
+  { href: '/dashboard/settings/ai', label: 'AI extraction', index: '10' },
 ];
 
 type Props = {

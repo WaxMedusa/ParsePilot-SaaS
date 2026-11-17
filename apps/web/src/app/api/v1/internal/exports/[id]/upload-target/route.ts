@@ -25,12 +25,21 @@ export const POST = withInternalService(async (request, context) => {
   const extension = exportRecord.format === 'xlsx' ? 'xlsx' : 'csv';
   const storageKey = `workspaces/${exportRecord.workspaceId}/exports/${exportRecord.id}-${crypto.randomUUID()}.${extension}`;
   const url = await getStorage().createUploadUrl(storageKey, body.contentType, retentionConfig.signedUrlSeconds * 4);
+  const headers: Record<string, string> = { 'Content-Type': body.contentType };
+  if (appConfig.storageDriver === 'supabase') {
+    // The signed token carries the upsert decision; sending these explicitly
+    // matches supabase-js and avoids provider-side defaults changing uploads.
+    headers['x-upsert'] = 'false';
+    headers['cache-control'] = 'max-age=3600';
+  } else if (appConfig.storageDriver === 's3') {
+    headers['x-amz-server-side-encryption'] = 'AES256';
+  }
   return ok(
     {
       storageKey,
       uploadUrl: url,
       method: 'PUT',
-      headers: { 'Content-Type': body.contentType },
+      headers,
       expiresInSeconds: retentionConfig.signedUrlSeconds * 4,
       direct: appConfig.storageDriver !== 'local' ? 'presigned' : 'internal',
     },

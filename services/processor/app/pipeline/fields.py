@@ -40,6 +40,15 @@ MONTHS = {
     "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6, "jul": 7, "july": 7,
     "aug": 8, "august": 8, "sep": 9, "sept": 9, "september": 9, "oct": 10,
     "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12,
+    # German, French and Spanish month abbreviations are common on invoices
+    # from markets the product already sells to.
+    "januar": 1, "jänner": 1, "jaenner": 1, "februar": 2, "märz": 3, "maerz": 3,
+    "mai": 5, "juni": 6, "juli": 7, "oktober": 10, "dezember": 12,
+    "janv": 1, "janvier": 1, "févr": 2, "fevr": 2, "février": 2, "fevrier": 2,
+    "mars": 3, "avr": 4, "avril": 4, "juin": 6, "juil": 7, "juillet": 7,
+    "août": 8, "aout": 8, "septembre": 9, "déc": 12, "decembre": 12,
+    "ene": 1, "enero": 1, "abr": 4, "abril": 4, "ago": 8, "agosto": 8,
+    "dic": 12, "diciembre": 12,
 }
 
 CURRENCY_SYMBOLS = {
@@ -58,12 +67,19 @@ def iso_date(year: int, month: int, day: int) -> str | None:
     return parsed.isoformat()
 
 
-def normalize_date(raw: str | None) -> str | None:
+def normalize_date(raw: str | None, order: str = "dmy") -> str | None:
+    """Normalizes a date, using ``order`` only when the input is ambiguous.
+
+    ``order`` is ``mdy`` or ``dmy``. Unambiguous values (14/03/2026) always
+    decide for themselves; the parameter exists so callers can pass document
+    context for values such as 03/04/2026.
+    """
     if not raw:
         return None
     value = raw.strip()
     if not value:
         return None
+    order = order if order in {"mdy", "dmy"} else "dmy"
 
     match = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ].*)?$", value)
     if match:
@@ -73,24 +89,33 @@ def normalize_date(raw: str | None) -> str | None:
     if match:
         return iso_date(int(match.group(1)), int(match.group(2)), int(match.group(3)))
 
-    match = re.match(r"^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$", value)
+    match = re.match(r"^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$", value)
     if match:
-        first, second, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        first, second = int(match.group(1)), int(match.group(2))
+        year = int(match.group(3))
+        if year < 100:
+            year += 2000 if year < 70 else 1900
         if first > 12 >= second:
             return iso_date(year, second, first)
         if second > 12 >= first:
             return iso_date(year, first, second)
+        if order == "mdy":
+            return iso_date(year, first, second)
         return iso_date(year, second, first)
 
-    match = re.match(r"^(\d{1,2})[\s.-]+([A-Za-z]{3,9})[\s,.-]+(\d{4})$", value)
-    if match and match.group(2).lower() in MONTHS:
-        return iso_date(int(match.group(3)), MONTHS[match.group(2).lower()], int(match.group(1)))
+    match = re.match(r"^(\d{1,2})[\s.-]+([^\W\d_]{3,12})[\s,.-]+(\d{4})$", value)
+    if match and _month_number(match.group(2)) is not None:
+        return iso_date(int(match.group(3)), _month_number(match.group(2)) or 0, int(match.group(1)))
 
-    match = re.match(r"^([A-Za-z]{3,9})[\s.-]+(\d{1,2})[\s,.-]+(\d{4})$", value)
-    if match and match.group(1).lower() in MONTHS:
-        return iso_date(int(match.group(3)), MONTHS[match.group(1).lower()], int(match.group(2)))
+    match = re.match(r"^([^\W\d_]{3,12})[\s.-]+(\d{1,2})[\s,.-]+(\d{4})$", value)
+    if match and _month_number(match.group(1)) is not None:
+        return iso_date(int(match.group(3)), _month_number(match.group(1)) or 0, int(match.group(2)))
 
     return None
+
+
+def _month_number(token: str) -> int | None:
+    return MONTHS.get(token.casefold().strip("."))
 
 
 def normalize_currency(raw: str | None) -> str | None:
@@ -152,7 +177,7 @@ def normalize_decimal(raw: str | None) -> str | None:
     return f"{quantized:.2f}"
 
 
-def normalize_field(field_key: str, value: str | None) -> str | None:
+def normalize_field(field_key: str, value: str | None, date_order: str = "dmy") -> str | None:
     field_type = FIELD_TYPES.get(field_key, "string")
     if value is None:
         return None
@@ -160,7 +185,7 @@ def normalize_field(field_key: str, value: str | None) -> str | None:
     if not value:
         return None
     if field_type == "date":
-        return normalize_date(value) or value
+        return normalize_date(value, date_order) or value
     if field_type == "currency":
         return normalize_currency(value) or value
     if field_type == "decimal":

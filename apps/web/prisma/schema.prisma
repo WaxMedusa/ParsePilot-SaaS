@@ -155,6 +155,7 @@ model User {
   exports           Export[]
   fieldEdits        ExtractionField[]     @relation("FieldEditor")
   cookieConsent     CookieConsent?
+  aiSettingsUpdates AiSettings[]           @relation("AiSettingsUpdater")
 
   @@index([createdAt])
 }
@@ -184,6 +185,7 @@ model Workspace {
   auditEntries   AuditLog[]
   dataRequests   DataRequest[]
   deletionRecords DeletionRecord[]
+  aiSettings     AiSettings?
 
   @@index([ownerId])
   @@index([deletedAt])
@@ -634,6 +636,26 @@ model CookieConsent {
   user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([anonymousId])
+}
+
+/// Per-workspace AI provider settings. The API key is stored encrypted with
+/// SETTINGS_ENCRYPTION_KEY and is never returned by the API.
+model AiSettings {
+  id               String   @id @default(uuid()) @db.Uuid
+  workspaceId      String   @unique @db.Uuid
+  enabled          Boolean  @default(true)
+  baseUrl          String
+  model            String
+  apiKeyCiphertext String
+  apiKeyHint       String
+  updatedById      String?  @db.Uuid
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedBy        User?     @relation("AiSettingsUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedById])
 }
 
 model SecurityIncident {

@@ -82,7 +82,9 @@ def extract_text(data: bytes, mime_type: str, on_ocr: Callable[[], None] | None 
             ocr_used = False
             ocr_pages = 0
             for page in document:
-                text = page.get_text("text") or ""
+                # Sort by visual position so two-column invoices do not
+                # interleave the bill-to block with line-item amounts.
+                text = page.get_text("text", sort=True) or ""
                 if len(text.strip()) < 24 and settings.ocr_enabled:
                     if ocr_pages >= settings.ocr_max_pages:
                         raise PipelineError(
