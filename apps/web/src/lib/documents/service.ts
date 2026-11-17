@@ -138,6 +138,11 @@ export async function createDocumentFromUpload(input: {
 export async function getDocumentDetail(documentId: string, workspaceId: string) {
   const document = await findDocumentForWorkspace(documentId, workspaceId);
   const latestRun = document.extractionRuns[0] ?? null;
+  const runWarnings = Array.isArray((latestRun?.rawPayload as { warnings?: unknown } | null)?.warnings)
+    ? ((latestRun?.rawPayload as { warnings: unknown[] }).warnings ?? []).filter(
+        (warning): warning is string => typeof warning === 'string',
+      )
+    : [];
 
   return {
     id: document.id,
@@ -174,6 +179,7 @@ export async function getDocumentDetail(documentId: string, workspaceId: string)
           version: latestRun.version,
           provider: latestRun.provider,
           model: latestRun.model,
+          warnings: runWarnings,
           ocrUsed: latestRun.ocrUsed,
           pagesProcessed: latestRun.pagesProcessed,
           completedAt: latestRun.completedAt?.toISOString() ?? null,

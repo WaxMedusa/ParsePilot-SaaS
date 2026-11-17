@@ -1,11 +1,12 @@
 """Field extraction.
 
-Rules run first and are always available. When an OpenAI-compatible endpoint is
-configured, a schema-constrained model call reviews the document and fills gaps.
-A conflicting model reading of a party, identity or payment field never replaces
-the rule value: the rule value is kept with lower confidence so the document
-requires human review. Totals and dates keep the deterministic validation path.
-Any provider failure falls back to the rules and is reported as a warning.
+When an OpenAI-compatible endpoint is configured, the model reads the whole
+page first and its readings are the values recorded for the document: the model
+sees the layout, which is what label matching cannot do on unusual documents.
+The deterministic rules then fill only the keys the model left empty, and the
+arithmetic validator still checks totals, so a bad model reading is flagged for
+review instead of being exported quietly. A provider that cannot be reached
+falls back to the rules and reports the provider error.
 
 The rules deliberately look for labels and blocks rather than taking the first
 line that contains a number. That distinction matters on real invoices: a line
@@ -24,8 +25,17 @@ from typing import Any
 
 import httpx
 
+from urllib.parse import urlparse
+
 from ..config import AiConfig, get_settings
-from .fields import FIELD_TYPES, build_fields, normalize_currency, normalize_date, normalize_decimal
+from .fields import (
+    FIELD_TYPES,
+    build_fields,
+    normalize_currency,
+    normalize_date,
+    normalize_decimal,
+    normalize_field,
+)
 
 log = logging.getLogger(__name__)
 
@@ -792,26 +802,12 @@ def _confidence_for(key: str, rules: dict[str, Any]) -> float:
     return 0.4
 
 
-# A model reading the whole page can be more accurate than label matching on
-# these fields, but disagreement alone is not proof it is right. Financial
-# values are excluded because the validator can check them arithmetically; the
-# model only supplies them when missing.
-_AI_REVIEW_FIELDS = frozenset(
-    {
-        "document_title",
-        "document_number",
-        "vendor_name",
-        "vendor_address",
-        "customer_name",
-        "customer_address",
-        "payment_terms",
-        "purchase_order",
-    }
-)
+_AI_CONFIDENCE = 0.92
 
-# Below the web validator's 0.6 low-confidence threshold, so a disagreement
-# becomes a review task instead of a silent replacement.
-_DISAGREEMENT_CONFIDENCE = 0.55
+# The model keeps a disagreement too, but the lower score tells the reviewer the
+# rules read that field differently. It stays above the validator's 0.6
+# low-confidence threshold because the model's reading is the value we want.
+_AI_DISAGREEMENT_CONFIDENCE = 0.8
 
 
 def _is_reasoning_model(model: str) -> bool:
@@ -819,16 +815,43 @@ def _is_reasoning_model(model: str) -> bool:
     return bool(re.match(r"^(?:o\d|gpt-5)", model, re.I))
 
 
-def _current_value(entry: Any) -> Any:
-    return entry.get("value") if isinstance(entry, dict) else entry
+def _comparable(key: str, value: Any) -> str:
+    normalized = normalize_field(key, str(value)) if key in FIELD_TYPES else None
+    return re.sub(r"\s+", " ", normalized or str(value)).strip().casefold()
 
 
-def _same_value(left: Any, right: Any) -> bool:
+def _same_value(key: str, left: Any, right: Any) -> bool:
     if left is None or right is None:
         return left is None and right is None
-    return re.sub(r"\s+", " ", str(left)).strip().casefold() == re.sub(
-        r"\s+", " ", str(right)
-    ).strip().casefold()
+    return _comparable(key, left) == _comparable(key, right)
+
+
+def _ai_value_usable(key: str, value: Any) -> bool:
+    """Rejects a model value that cannot be the field it claims to be.
+
+    The model is authoritative on what the document says, not on data types or
+    on what a party name is: an address block or a heading returned as
+    vendor_name would otherwise overwrite a correct rule reading.
+    """
+    text = str(value).strip()
+    if not text:
+        return False
+    field_type = FIELD_TYPES.get(key)
+    if field_type == "date":
+        return normalize_date(text) is not None
+    if field_type == "decimal":
+        return normalize_decimal(text) is not None
+    if field_type == "currency":
+        return normalize_currency(text) is not None
+    if key == "line_items":
+        try:
+            items = json.loads(text) if isinstance(value, str) else value
+        except ValueError:
+            return False
+        return isinstance(items, list) and bool(items)
+    if key in {"vendor_name", "customer_name"}:
+        return not _is_generic_party(text) and not _looks_like_address(text)
+    return len(text) <= 300
 
 
 AI_SCHEMA = {
@@ -861,20 +884,64 @@ AI_SCHEMA = {
 }
 
 
-def ai_extract(text: str, ai: AiConfig | None = None) -> tuple[dict[str, Any] | None, str | None]:
+_GOOGLE_AI_HOST = "generativelanguage.googleapis.com"
+
+
+def provider_chat_url(base_url: str) -> str:
+    """OpenAI-compatible chat-completions URL for a provider base URL.
+
+    Gemini exposes its OpenAI-compatible surface only under /v1beta/openai, so
+    the native base URL a user copies from the docs (…/v1) answered 404 for
+    every document while the extraction quietly fell back to the rules.
+    """
+    base = base_url.strip().rstrip("/")
+    host = (urlparse(base).hostname or "").lower()
+    if host == _GOOGLE_AI_HOST or host.endswith(f".{_GOOGLE_AI_HOST}"):
+        return f"https://{_GOOGLE_AI_HOST}/v1beta/openai/chat/completions"
+    if base.endswith("/chat/completions"):
+        return base
+    return f"{base}/chat/completions"
+
+
+def _provider_error_note(response: httpx.Response) -> str:
+    """Short, non-secret provider message so a failure is visible in the UI."""
+    detail = ""
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = None
+    if isinstance(payload, dict):
+        error = payload.get("error")
+        if isinstance(error, dict):
+            detail = str(error.get("message") or error.get("status") or "")
+        elif isinstance(error, str):
+            detail = error
+        if not detail:
+            detail = str(payload.get("message") or "")
+    detail = re.sub(r"\s+", " ", detail).strip()[:160]
+    return f"ai_provider_error:{response.status_code}{f' {detail}' if detail else ''}"
+
+
+def ai_extract(
+    text: str, ai: AiConfig | None = None
+) -> tuple[dict[str, Any] | None, str | None, str | None]:
+    """Returns (fields, model, error). error is a safe note for the result."""
     settings = get_settings()
     if not settings.ai_enabled:
-        return None, None
+        return None, None, None
     config = ai or AiConfig(
         api_key=settings.ai_api_key or "",
         base_url=settings.ai_base_url,
         model=settings.ai_model,
     )
-    if not config.api_key:
-        return None, None
+    api_key = config.api_key.strip()
+    # Providers accept the bare model id; “models/…” is the Gemini native form.
+    model_name = re.sub(r"^models/", "", config.model.strip())
+    if not api_key or not model_name:
+        return None, None, None
 
     payload: dict[str, Any] = {
-        "model": config.model,
+        "model": model_name,
         "messages": [
             {
                 "role": "system",
@@ -896,14 +963,16 @@ def ai_extract(text: str, ai: AiConfig | None = None) -> tuple[dict[str, Any] | 
     }
     if not _is_reasoning_model(config.model):
         payload["temperature"] = 0
+    url = provider_chat_url(config.base_url)
+    headers = {"authorization": f"Bearer {api_key}", "content-type": "application/json"}
+    if url.startswith(f"https://{_GOOGLE_AI_HOST}"):
+        # Google accepts the bearer token; the native header also keeps plain
+        # gateways in front of it working.
+        headers["x-goog-api-key"] = api_key
     try:
         with httpx.Client(timeout=httpx.Timeout(settings.ai_timeout_seconds, connect=10.0)) as client:
-            response = client.post(
-                f"{config.base_url}/chat/completions",
-                headers={"authorization": f"Bearer {config.api_key}", "content-type": "application/json"},
-                json=payload,
-            )
-            if response.status_code in {400, 404, 422} and "response_format" in payload:
+            response = client.post(url, headers=headers, json=payload)
+            if response.status_code in {400, 404, 405, 415, 422} and "response_format" in payload:
                 # Some reasoning models expose JSON output only through their
                 # newer API surface. Retry with a plain JSON instruction rather
                 # than silently falling back to rules for every document.
@@ -914,25 +983,23 @@ def ai_extract(text: str, ai: AiConfig | None = None) -> tuple[dict[str, Any] | 
                     {**payload["messages"][0], "content": payload["messages"][0]["content"] + " Return a single JSON object only."},
                     payload["messages"][1],
                 ]
-                response = client.post(
-                    f"{config.base_url}/chat/completions",
-                    headers={"authorization": f"Bearer {config.api_key}", "content-type": "application/json"},
-                    json=fallback,
-                )
-            response.raise_for_status()
+                response = client.post(url, headers=headers, json=fallback)
+            if response.status_code >= 400:
+                log.warning("ai_extraction_failed", extra={"fields": {"status": response.status_code}})
+                return None, None, _provider_error_note(response)
             body = response.json()
         content = str(body["choices"][0]["message"]["content"] or "").strip()
         if content.startswith("```"):
             content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.I).strip()
         parsed = json.loads(content)
         if not isinstance(parsed, dict):
-            return None, "ai_invalid_response"
-        model = str(body.get("model") or config.model)[:120]
-        return parsed, model
+            return None, None, "ai_provider_error:invalid_json"
+        model = str(body.get("model") or model_name)[:120]
+        return parsed, model, None
     except Exception as error:  # noqa: BLE001 - provider failures must not fail the job
         # Log only the error class, never the provider response body or the key.
         log.warning("ai_extraction_failed", extra={"fields": {"error": type(error).__name__}})
-        return None, "ai_extraction_failed"
+        return None, None, f"ai_provider_error:{type(error).__name__}"
 
 
 def extract(
@@ -941,30 +1008,37 @@ def extract(
     """Returns (fields, kind, language, warnings, model)."""
     warnings: list[str] = []
     rules = extract_rules(text)
-    merged: dict[str, Any] = dict(rules)
+    ai_fields, model, ai_error = ai_extract(text, ai)
 
-    ai_fields, model = ai_extract(text, ai)
-    if ai_fields:
+    if ai_fields is not None:
+        # What the model read on the page is what the document says. The rules
+        # fill the keys it left empty; where both read a key differently, the
+        # model's reading is kept and the disagreement is recorded for review.
+        merged: dict[str, Any] = {
+            key: {"value": value, "confidence": _confidence_for(key, rules)}
+            for key, value in rules.items()
+            if key in FIELD_TYPES
+        }
         for key, value in ai_fields.items():
             if key not in FIELD_TYPES or value in (None, ""):
                 continue
-            current = _current_value(merged.get(key))
-            if current in (None, ""):
-                merged[key] = {"value": value, "confidence": 0.9}
-            elif _same_value(current, value):
-                if isinstance(merged.get(key), dict):
-                    merged[key]["confidence"] = max(float(merged[key].get("confidence") or 0), 0.95)
-            else:
-                if key in _AI_REVIEW_FIELDS:
-                    # Keep the rule value: the model may have read the page
-                    # better, or the rules may be right, so a human decides.
-                    merged[key] = {"value": current, "confidence": _DISAGREEMENT_CONFIDENCE}
+            if not _ai_value_usable(key, value):
+                continue
+            rule_value = rules.get(key)
+            if rule_value not in (None, "") and not _same_value(key, rule_value, value):
+                merged[key] = {"value": value, "confidence": _AI_DISAGREEMENT_CONFIDENCE}
                 warnings.append(f"provider_disagreement:{key}")
-    elif model == "ai_extraction_failed":
+            else:
+                merged[key] = {"value": value, "confidence": _AI_CONFIDENCE}
+    else:
+        merged = dict(rules)
+
+    if ai_error:
         warnings.append("ai_extraction_failed")
+        warnings.append(ai_error)
 
     fields = build_fields(merged)
-    if not ai_fields:
+    if ai_fields is None:
         for field in fields:
             if field.get("confidence") is None:
                 field["confidence"] = _confidence_for(field["key"], rules)

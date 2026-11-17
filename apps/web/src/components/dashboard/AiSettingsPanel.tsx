@@ -197,7 +197,7 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
         <div className={styles.cardBody}>
           <ul className={styles.hint} style={{ display: 'grid', gap: 8, paddingLeft: 16, margin: 0 }}>
             <li>The key is stored encrypted and returned only to the processing worker for this workspace&apos;s jobs.</li>
-            <li>Rules still run first; the provider fills gaps and disagreements are sent to review instead of replacing rule values.</li>
+            <li>The model reads each document first and its readings are the values recorded; the rules only fill fields it leaves empty.</li>
             <li>Keys are not included in exports, audit entries or API responses; only the last four characters are shown.</li>
             <li>Removing the key immediately returns this workspace to rules-only extraction.</li>
           </ul>

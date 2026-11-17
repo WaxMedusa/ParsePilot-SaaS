@@ -37,6 +37,8 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
     ? metadata.validationIssues.filter((issue): issue is string => typeof issue === 'string')
     : [];
   const fields = detail.extraction?.fields ?? [];
+  const extractionWarnings = detail.extraction?.warnings ?? [];
+  const aiErrorDetail = extractionWarnings.find((warning) => warning.startsWith('ai_provider_error:'));
 
   return (
     <div className={layout.page}>
@@ -54,6 +56,19 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
           <div>
             <strong>Processing failed{detail.failureCode ? ` (${detail.failureCode})` : ''}.</strong>
             <p className={styles.noticeBody}>{detail.failureMessage ?? 'The worker reported a failure. Review the job timeline and retry.'}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {extractionWarnings.includes('ai_extraction_failed') ? (
+        <div className={`${layout.notice} ${layout.noticeWarning}`} role="note">
+          <div>
+            <strong>The AI model did not read this document.</strong>
+            <p className={styles.noticeBody}>
+              {aiErrorDetail
+                ? `The provider rejected the request: ${aiErrorDetail.replace(/^ai_provider_error:/, '')}. The values below come from the built-in rules.`
+                : 'The provider could not be reached, so the values below come from the built-in rules.'}
+            </p>
           </div>
         </div>
       ) : null}
