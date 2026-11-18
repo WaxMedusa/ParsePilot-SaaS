@@ -19,9 +19,19 @@
   --color-faint: #999a90;
   --color-border: #d8d4c9;
   --color-border-strong: #bfbbaf;
-  --color-primary: #626b56;
-  --color-primary-strong: #4d5644;
-  --color-primary-soft: #e7e9e0;
+  /* Burnt orange. #cc5500 is the mark colour for display italics, rules, fills
+     and indices. The deeper rust holds cream text on solid surfaces (buttons,
+     the closing band); the bright shade is the same idea lifted for dark
+     panels, where #cc5500 goes muddy. */
+  --color-accent: #cc5500;
+  --color-accent-strong: #9c4100;
+  --color-accent-deep: #b04a00;
+  --color-accent-bright: #e8793c;
+  --color-accent-soft: #f7e7d9;
+
+  --color-primary: var(--color-accent);
+  --color-primary-strong: var(--color-accent-strong);
+  --color-primary-soft: var(--color-accent-soft);
   --color-olive: #626b56;
   --color-olive-deep: #4d5644;
   --color-success: #496348;
@@ -92,6 +102,75 @@
   --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
   --duration-fast: 140ms;
   --duration-base: 240ms;
+
+  /* Surfaces that read as a lifted panel in either theme. */
+  --color-panel: #171816;
+
+  /* Two constants, deliberately not themed: text on an accent fill, and text
+     on a cream fill. They stay legible whichever way the page is set. */
+  --color-on-accent: #f7f2ea;
+  --color-on-accent-hover: #f0dcc8;
+}
+
+/* ==========================================================================
+   Dark theme
+   Same warm paper-and-ink system inverted: near-black ground, bone text, and
+   the accent lifted so it does not sink into the dark. Set on <html> so there
+   is no flash and no script needed.
+   ========================================================================== */
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Material */
+  --color-background: #101010;
+  --color-paper: #101010;
+  --color-canvas: #151413;
+  --color-surface: #171615;
+  --color-surface-muted: #1d1c1a;
+  --color-surface-strong: #262421;
+  --color-panel: #191816;
+
+  /* Type */
+  --color-ink: #f4f1e9;
+  --color-text: #ebe7de;
+  --color-text-soft: #c7c3b8;
+  --color-muted: #99958a;
+  --color-faint: #716d64;
+
+  /* Rules */
+  --color-border: #2a2825;
+  --color-border-strong: #3f3c37;
+
+  /* Accent, re-tuned for a dark ground */
+  --color-accent: #e2701f;
+  --color-accent-strong: #f18b4f;
+  --color-accent-deep: #c25808;
+  --color-accent-bright: #f2945f;
+  --color-accent-soft: #2b1b10;
+  --color-primary: var(--color-accent);
+  --color-primary-strong: var(--color-accent-strong);
+  --color-primary-soft: var(--color-accent-soft);
+
+  /* Status */
+  --color-success: #86ac7d;
+  --color-success-soft: #1b271a;
+  --color-warning: #d2a253;
+  --color-warning-soft: #2a2316;
+  --color-danger: #cf8a7e;
+  --color-danger-soft: #2b1c19;
+  --color-info-soft: #1a221f;
+
+  /* On the lifted panels */
+  --color-on-dark: #f4f1e9;
+  --color-on-dark-muted: rgba(244, 241, 233, 0.64);
+  --color-on-dark-faint: rgba(244, 241, 233, 0.4);
+  --color-dark-line: rgba(244, 241, 233, 0.14);
+
+  /* Elevation */
+  --shadow-subtle: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --shadow-raised: 0 18px 40px rgba(0, 0, 0, 0.5);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 *,
@@ -234,8 +313,7 @@ pre {
   content: '';
   width: 22px;
   height: 1px;
-  background: currentColor;
-  opacity: 0.55;
+  background: var(--color-accent);
   flex: none;
 }
 

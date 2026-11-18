@@ -52,7 +52,7 @@
 }
 
 .asideTitle em {
-  color: #aab29a;
+  color: var(--color-accent-bright);
 }
 
 .asideCopy {
@@ -86,7 +86,7 @@
 
 .asideList li::before {
   content: '—';
-  color: #aab29a;
+  color: var(--color-accent-bright);
   font-family: var(--font-mono);
   font-size: 9px;
   line-height: 1.8;

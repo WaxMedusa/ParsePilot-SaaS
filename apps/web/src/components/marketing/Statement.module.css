@@ -1,5 +1,5 @@
 .section {
-  background: var(--color-ink);
+  background: var(--color-panel);
   color: var(--color-on-dark);
   padding: var(--section-y) 0;
 }
@@ -46,7 +46,7 @@
 }
 
 .heading em {
-  color: #aab29a;
+  color: var(--color-accent-bright);
 }
 
 .bodyGrid {

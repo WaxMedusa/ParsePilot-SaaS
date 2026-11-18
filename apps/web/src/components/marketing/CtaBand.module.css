@@ -1,5 +1,5 @@
 .section {
-  background: var(--color-primary);
+  background: var(--color-accent-deep);
   color: var(--color-on-dark);
   padding: clamp(56px, 7vw, 104px) 0;
 }
@@ -40,7 +40,7 @@
 }
 
 .heading em {
-  color: #d9ddcf;
+  color: #ffdcc4;
 }
 
 .actions {

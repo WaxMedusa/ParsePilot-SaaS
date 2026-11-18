@@ -41,15 +41,15 @@
 }
 
 .primary {
-  background: var(--color-ink);
-  border-color: var(--color-ink);
-  color: var(--color-paper);
+  background: var(--color-accent-deep);
+  border-color: var(--color-accent-deep);
+  color: var(--color-on-accent);
 }
 
 .primary:hover {
-  background: var(--color-primary-strong);
-  border-color: var(--color-primary-strong);
-  color: var(--color-paper);
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+  color: var(--color-on-accent);
 }
 
 .secondary {
@@ -90,15 +90,15 @@
 }
 
 .inverse {
-  background: var(--color-paper);
-  border-color: var(--color-paper);
-  color: var(--color-ink);
+  background: var(--color-on-accent);
+  border-color: var(--color-on-accent);
+  color: var(--color-night);
 }
 
 .inverse:hover {
-  background: var(--color-primary-soft);
-  border-color: var(--color-primary-soft);
-  color: var(--color-ink);
+  background: var(--color-on-accent-hover);
+  border-color: var(--color-on-accent-hover);
+  color: var(--color-night);
 }
 
 .icon {
