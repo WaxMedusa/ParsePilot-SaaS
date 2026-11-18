@@ -5,6 +5,7 @@ import '@fontsource-variable/jetbrains-mono';
 import './globals.css';
 import { CookieBanner } from '@/components/cookies/CookieBanner';
 import { CsrfBootstrap } from '@/components/security/CsrfBootstrap';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: {
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <CsrfBootstrap />
         <CookieBanner />
+        <Analytics />
       </body>
     </html>
   );
