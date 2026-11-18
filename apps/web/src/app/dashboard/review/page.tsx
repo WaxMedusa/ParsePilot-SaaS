@@ -36,7 +36,7 @@ export default async function ReviewQueuePage({
       <PageHeader
         eyebrow="Quality control"
         title="Review queue"
-        description={`${total} document${total === 1 ? '' : 's'} waiting for a human check. Open a document, correct any fields, and choose Mark reviewed to move it to completed.`}
+        description={`${total} waiting for a human check`}
         actions={
           <ButtonLink href="/dashboard/documents" variant="secondary">
             All documents
@@ -62,7 +62,7 @@ export default async function ReviewQueuePage({
             </p>
           </div>
         ) : (
-          <DocumentsTable documents={documents} showEmpty={false} />
+          <DocumentsTable documents={documents} workspaceId={auth.workspace.id} showEmpty={false} />
         )}
 
         <div className={styles.cardFoot}>

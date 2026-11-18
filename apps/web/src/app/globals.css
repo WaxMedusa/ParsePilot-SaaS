@@ -34,8 +34,12 @@
   --color-primary-soft: var(--color-accent-soft);
   --color-olive: #626b56;
   --color-olive-deep: #4d5644;
-  --color-success: #496348;
-  --color-success-soft: #e7ede3;
+  /* Green sits beside burnt orange, so it is pulled cool and deep. A yellow
+     green (sage) turns sickly next to #cc5500; a blue-leaning one reads as a
+     deliberate second colour. */
+  --color-success: #2f6b52;
+  --color-success-soft: #e3ede8;
+  --color-success-line: #c3d7cd;
   --color-warning: #84652f;
   --color-warning-soft: #f1eadb;
   --color-danger: #874b43;
@@ -85,13 +89,14 @@
   --space-9: 96px;
   --space-10: 128px;
 
-  /* Hard edges. The interface is drawn with rules, not bubbles. */
-  --radius-xs: 1px;
-  --radius-sm: 1px;
-  --radius-md: 2px;
-  --radius-lg: 2px;
-  --radius-xl: 2px;
-  --radius-pill: 2px;
+  /* Soft corners on surfaces — cards, panels, buttons, menus. Hairlines and
+     section rules stay square so the page still reads as printed. */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
 
   /* Elevation is used sparingly, only for the document/work surface. */
   --shadow-subtle: 0 1px 0 rgba(23, 24, 22, 0.04);
@@ -153,8 +158,9 @@ html[data-theme='dark'] {
   --color-primary-soft: var(--color-accent-soft);
 
   /* Status */
-  --color-success: #86ac7d;
-  --color-success-soft: #1b271a;
+  --color-success: #7cb9a0;
+  --color-success-soft: #16241f;
+  --color-success-line: #2a463b;
   --color-warning: #d2a253;
   --color-warning-soft: #2a2316;
   --color-danger: #cf8a7e;

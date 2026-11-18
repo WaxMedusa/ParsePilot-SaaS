@@ -171,7 +171,8 @@
   .mobile {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 22px;
     position: fixed;
     inset: 76px 0 0;
     z-index: 49;
@@ -209,11 +210,13 @@
     flex: none;
   }
 
+  /* The way out sits directly after the options, not pinned to the bottom of
+     the viewport where a consent sheet or a keyboard can hide it. */
   .mobileFoot {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding-top: 36px;
+    gap: 10px;
+    padding-top: 0;
   }
 
   .mobilePrimary,
@@ -229,7 +232,8 @@
   .mobilePrimary {
     background: var(--color-ink);
     color: var(--color-paper);
-    padding: 15px 16px;
+    padding: 16px;
+    border-radius: var(--radius-md);
   }
 
   .mobilePrimary:hover {
@@ -238,8 +242,9 @@
   }
 
   .mobileSecondary {
-    border-bottom: 1px solid var(--color-border);
-    padding-bottom: 13px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
     color: var(--color-text-soft);
   }
 

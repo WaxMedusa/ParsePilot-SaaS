@@ -91,7 +91,7 @@ export function CookieBanner() {
             </h2>
             <p id="cookie-description" className={styles.description}>
               {mode === 'summary'
-                ? 'We use essential cookies to keep you signed in and protect forms. Optional analytics and marketing cookies are off until you turn them on.'
+                ? 'Essential cookies keep you signed in and protect forms. Analytics and marketing stay off until you allow them.'
                 : 'Essential cookies are always active. Choose whether optional categories may be used; you can change this at any time from the footer.'}
             </p>
           </div>

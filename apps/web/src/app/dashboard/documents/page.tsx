@@ -5,7 +5,6 @@ import { listDocuments } from '@/lib/documents/repository';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { UploadDisclosure } from '@/components/dashboard/UploadDisclosure';
 import { DocumentsTable } from '@/components/dashboard/DocumentsTable';
-import { formatDate } from '@/lib/format';
 import styles from '@/components/dashboard/Dashboard.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -55,7 +54,7 @@ export default async function DocumentsPage({
       <PageHeader
         eyebrow="Workspace"
         title="Documents"
-        description={`${total} document${total === 1 ? '' : 's'} in ${auth.workspace.name}. Deleted documents are hidden and scheduled for purge.`}
+        description={`${total} document${total === 1 ? '' : 's'}`}
         actions={
           <Link href="#upload" className={styles.tag}>
             <Upload size={12} /> Upload
@@ -99,7 +98,7 @@ export default async function DocumentsPage({
             </button>
           </form>
         </div>
-        <DocumentsTable documents={documents} />
+        <DocumentsTable documents={documents} workspaceId={auth.workspace.id} />
         <div className={styles.cardFoot}>
           <span>
             Page {page} of {totalPages} · showing {documents.length} of {total}
@@ -119,10 +118,6 @@ export default async function DocumentsPage({
         </div>
       </section>
 
-      <p className={styles.hint}>
-        Retention: deleted documents become inaccessible immediately and are purged from storage by the retention worker.
-        Last list refresh {formatDate(new Date())}.
-      </p>
     </div>
   );
 }

@@ -7,7 +7,7 @@
 
 .aside {
   position: relative;
-  background: var(--color-ink);
+  background: var(--color-night);
   color: var(--color-on-dark);
   padding: clamp(28px, 3vw, 44px);
   display: flex;

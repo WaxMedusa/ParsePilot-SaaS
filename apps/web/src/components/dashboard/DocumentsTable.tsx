@@ -3,9 +3,19 @@ import { FileText } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/Badge';
 import { formatAmount, formatBytes, formatDate } from '@/lib/format';
 import type { DocumentSummary } from '@/lib/documents/repository';
+import { DocumentRowActions } from './DocumentRowActions';
 import styles from './Dashboard.module.css';
+import rowStyles from './DocumentsTable.module.css';
 
-export function DocumentsTable({ documents, showEmpty = true }: { documents: DocumentSummary[]; showEmpty?: boolean }) {
+export function DocumentsTable({
+  documents,
+  workspaceId,
+  showEmpty = true,
+}: {
+  documents: DocumentSummary[];
+  workspaceId: string;
+  showEmpty?: boolean;
+}) {
   if (documents.length === 0 && showEmpty) {
     return (
       <div className={styles.empty}>
@@ -13,10 +23,7 @@ export function DocumentsTable({ documents, showEmpty = true }: { documents: Doc
           <FileText size={16} />
         </span>
         <p className={styles.emptyTitle}>No documents yet</p>
-        <p className={styles.emptyBody}>
-          Upload an invoice or receipt to start the pipeline. Native text is read first; OCR only runs on pages that need
-          it.
-        </p>
+        <p className={styles.emptyBody}>Drop a file above to start the first run.</p>
       </div>
     );
   }
@@ -32,7 +39,7 @@ export function DocumentsTable({ documents, showEmpty = true }: { documents: Doc
             <th>Status</th>
             <th>Pages</th>
             <th>Uploaded</th>
-            <th aria-label="Open" />
+            <th aria-label="Actions" />
           </tr>
         </thead>
         <tbody>
@@ -54,19 +61,32 @@ export function DocumentsTable({ documents, showEmpty = true }: { documents: Doc
                   <span className={styles.cellSub}>{document.documentNumber ?? document.id.slice(0, 8)}</span>
                 </div>
               </td>
-              <td data-label="Amount" className={styles.amount}>{document.totalAmount ? formatAmount(document.totalAmount, document.currency) : '—'}</td>
+              <td data-label="Amount" className={styles.amount}>
+                {document.totalAmount ? formatAmount(document.totalAmount, document.currency) : '—'}
+              </td>
               <td data-label="Status">
                 <div className={styles.cellMain} style={{ alignItems: 'flex-start', gap: 3 }}>
                   <StatusBadge status={document.status} />
                   {document.duplicateOfId ? <span className={styles.cellSub}>possible duplicate</span> : null}
                 </div>
               </td>
-              <td data-label="Pages" className={styles.amount}>{document.pageCount ?? '—'}</td>
-              <td data-label="Uploaded" className={styles.amount}>{formatDate(document.createdAt)}</td>
+              <td data-label="Pages" className={styles.amount}>
+                {document.pageCount ?? '—'}
+              </td>
+              <td data-label="Uploaded" className={styles.amount}>
+                {formatDate(document.createdAt)}
+              </td>
               <td>
-                <Link href={`/dashboard/documents/${document.id}`} className={styles.tag}>
-                  Open
-                </Link>
+                <div className={rowStyles.actions}>
+                  <Link href={`/dashboard/documents/${document.id}`} className={styles.tag}>
+                    Open
+                  </Link>
+                  <DocumentRowActions
+                    documentId={document.id}
+                    workspaceId={workspaceId}
+                    documentName={document.originalName}
+                  />
+                </div>
               </td>
             </tr>
           ))}

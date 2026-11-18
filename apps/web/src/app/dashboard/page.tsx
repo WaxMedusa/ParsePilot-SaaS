@@ -40,7 +40,7 @@ export default async function DashboardOverviewPage() {
       <PageHeader
         eyebrow={auth.workspace.name}
         title="Overview"
-        description="Processing health, review workload and usage for this billing period."
+        description="Processing health, review workload and usage."
         actions={
           <>
             <ButtonLink href="/dashboard/review" variant="secondary">
@@ -89,10 +89,10 @@ export default async function DashboardOverviewPage() {
           <section className={styles.card} id="upload">
             <div className={styles.cardHead}>
               <span className={styles.cardTitle}>Upload documents</span>
-              <span className={styles.cardHint}>queued · asynchronous</span>
+              <span className={styles.cardHint}>{usage.plan.maxUploadMb} MB max</span>
             </div>
             <div className={styles.cardBody}>
-              <UploadPanel workspaceId={workspaceId} compact />
+              <UploadPanel workspaceId={workspaceId} compact maxUploadMb={usage.plan.maxUploadMb} />
             </div>
           </section>
 
@@ -103,7 +103,7 @@ export default async function DashboardOverviewPage() {
                 View all →
               </Link>
             </div>
-            <DocumentsTable documents={recentDocuments.documents} />
+            <DocumentsTable documents={recentDocuments.documents} workspaceId={workspaceId} />
           </section>
 
           <section className={styles.card}>
@@ -161,27 +161,24 @@ export default async function DashboardOverviewPage() {
           <section className={styles.card}>
             <div className={styles.cardHead}>
               <span className={styles.cardTitle}>Pipeline stages</span>
-              <span className={styles.cardHint}>live counts</span>
+              <span className={styles.cardHint}>now</span>
             </div>
             <div className={styles.cardBody}>
               <ul className={styles.timeline}>
                 {[
-                  { stage: 'queued', label: 'Queued', copy: 'Durable job row created', count: counts.queued ?? 0 },
-                  { stage: 'extracting_text', label: 'Extracting text', copy: 'PyMuPDF reads the text layer', count: counts.extracting_text ?? 0 },
-                  { stage: 'running_ocr', label: 'Running OCR', copy: 'OCR only for pages without text', count: counts.running_ocr ?? 0 },
-                  { stage: 'extracting_fields', label: 'Extracting fields', copy: 'Schema-constrained extraction', count: counts.extracting_fields ?? 0 },
-                  { stage: 'validating', label: 'Validating', copy: 'Dates, currency and totals', count: counts.validating ?? 0 },
-                  { stage: 'detecting_duplicates', label: 'Detecting duplicates', copy: 'Checksum and field similarity', count: counts.detecting_duplicates ?? 0 },
+                  { stage: 'queued', label: 'Queued', count: counts.queued ?? 0 },
+                  { stage: 'extracting_text', label: 'Extracting text', count: counts.extracting_text ?? 0 },
+                  { stage: 'running_ocr', label: 'Running OCR', count: counts.running_ocr ?? 0 },
+                  { stage: 'extracting_fields', label: 'Extracting fields', count: counts.extracting_fields ?? 0 },
+                  { stage: 'validating', label: 'Validating', count: counts.validating ?? 0 },
+                  { stage: 'detecting_duplicates', label: 'Detecting duplicates', count: counts.detecting_duplicates ?? 0 },
                 ].map((stage) => (
                   <li key={stage.stage} className={styles.timelineItem}>
                     <span className={`${styles.timelineDot} ${stage.count > 0 ? styles.timelineDotActive : ''}`} />
-                    <div>
-                      <p className={styles.timelineLabel}>
-                        {stage.label}
-                        {stage.count > 0 ? ` · ${stage.count}` : ''}
-                      </p>
-                      <p className={styles.timelineMeta}>{stage.copy}</p>
-                    </div>
+                    <p className={styles.timelineLabel}>
+                      {stage.label}
+                      <span className={styles.timelineCount}>{stage.count}</span>
+                    </p>
                   </li>
                 ))}
               </ul>

@@ -20,15 +20,16 @@ const WORKSPACE_NAV = [
 ];
 
 const SETTINGS_NAV = [
-  { href: '/dashboard/settings/billing', label: 'Billing', index: '07' },
-  { href: '/dashboard/settings/team', label: 'Team', index: '08' },
-  { href: '/dashboard/settings/privacy', label: 'Privacy & data', index: '09' },
-  { href: '/dashboard/settings/ai', label: 'AI extraction', index: '10' },
+  { href: '/dashboard/settings/profile', label: 'Profile', index: '07' },
+  { href: '/dashboard/settings/billing', label: 'Billing', index: '08' },
+  { href: '/dashboard/settings/team', label: 'Team', index: '09' },
+  { href: '/dashboard/settings/privacy', label: 'Privacy & data', index: '10' },
+  { href: '/dashboard/settings/ai', label: 'AI extraction', index: '11' },
 ];
 
 type Props = {
   children: React.ReactNode;
-  user: { name: string | null; email: string; emailVerified: boolean };
+  user: { name: string | null; email: string; emailVerified: boolean; avatarUrl: string | null };
   workspace: { id: string; name: string; slug: string; planCode: string; role: string };
   workspaces: { id: string; name: string; planCode: string; role: string }[];
   reviewCount: number;
@@ -188,19 +189,27 @@ export function DashboardShell({ children, user, workspace, workspaces, reviewCo
             <span className={styles.liveHint}>every 5s</span>
           </div>
         ) : null}
-        <p className={styles.securityNote}>Private storage · signed links</p>
         <div className={styles.user}>
-          <span className={styles.avatar}>{initials || 'U'}</span>
-          <span className={styles.userText}>
-            <span className={styles.userName}>{user.name ?? 'Account'}</span>
-            <span className={styles.userEmail}>{user.email}</span>
-          </span>
+          <Link href="/dashboard/settings/profile" className={styles.userLink} aria-label="Profile settings">
+            <span className={styles.avatar}>
+              {user.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatarUrl} alt="" />
+              ) : (
+                initials || 'U'
+              )}
+            </span>
+            <span className={styles.userText}>
+              <span className={styles.userName}>{user.name ?? 'Account'}</span>
+              <span className={styles.userEmail}>{user.email}</span>
+            </span>
+          </Link>
           <button type="button" className={styles.signOut} onClick={signOut} disabled={signingOut}>
             {signingOut ? 'Leaving…' : 'Sign out'}
           </button>
         </div>
         <Link href="/privacy" className={styles.legalLink}>
-          Privacy · Terms · Security
+          Privacy · Terms
         </Link>
       </div>
     </>
@@ -228,7 +237,9 @@ export function DashboardShell({ children, user, workspace, workspaces, reviewCo
           <Menu size={18} />
         </button>
         <Logo href="/dashboard" />
-        <span className={styles.mobilePlan}>{workspace.planCode}</span>
+        <Link href="/dashboard/settings/profile" className={styles.mobilePlan}>
+          {workspace.planCode} plan
+        </Link>
       </div>
 
       {mobileOpen ? (

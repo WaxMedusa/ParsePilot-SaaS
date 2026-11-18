@@ -1,17 +1,25 @@
 import Link from 'next/link';
 import styles from './Logo.module.css';
 
+/**
+ * The brand lockup: a flat mark (bar, accent triangle, rounded sweep) beside a
+ * two-tone wordmark. The mark is drawn to the artwork's own proportions
+ * (246 x 198) and inherits the ink colour, so it flips with the theme while the
+ * triangle stays burnt orange.
+ */
 export function Logo({ href = '/', tone = 'default' }: { href?: string; tone?: 'default' | 'inverse' }) {
   return (
     <Link href={href} className={`${styles.logo} ${tone === 'inverse' ? styles.inverse : ''}`} aria-label="ParsePilot home">
       <span className={styles.mark} aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M5 4.25h8.15L19 10.1v9.65H5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="miter" />
-          <path d="M13.15 4.25v5.85H19" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="miter" />
-          <path d="M8.2 13.2h7.6M8.2 16.2h5.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+        <svg viewBox="0 0 246 198" fill="none" focusable="false" aria-hidden="true">
+          <path d="M0 0h158v53H0z" fill="currentColor" />
+          <path d="M173 0l73 53h-73z" fill="var(--color-accent)" />
+          <path d="M69 73h149.5a27.5 27.5 0 0 1 0 55H150L0 198z" fill="currentColor" />
         </svg>
       </span>
-      <span className={styles.word}>ParsePilot</span>
+      <span className={styles.word}>
+        Parse<span className={styles.wordAccent}>Pilot</span>
+      </span>
     </Link>
   );
 }

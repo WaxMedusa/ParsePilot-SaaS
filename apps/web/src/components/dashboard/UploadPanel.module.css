@@ -1,41 +1,73 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
+
+/* ---------------------------------------------------------------------------
+   Drop zone
+   A dashed tray that becomes a solid accent ring while a drag is over it.
+   --------------------------------------------------------------------------- */
 
 .zone {
+  position: relative;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 13px;
-  padding: 14px 0;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-  background: transparent;
-  transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+  gap: 14px;
+  padding: 16px 16px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  transition:
+    border-color 180ms var(--ease-out),
+    background-color 180ms var(--ease-out),
+    transform 220ms var(--ease-out);
 }
 
-.zone:hover,
-.dragging {
-  background: var(--color-canvas);
-  border-color: var(--color-primary);
+.zone:hover {
+  border-color: var(--color-muted);
 }
 
-.mark {
+.dropping {
+  border-style: solid;
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  transform: scale(1.006);
+}
+
+.dropping .glyph {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  animation: glyph-pulse 1.1s var(--ease-out) infinite;
+}
+
+.busyZone {
+  opacity: 0.72;
+}
+
+.glyph {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   border: 1px solid var(--color-border-strong);
-  border-radius: 0;
-  color: var(--color-primary);
-  font-family: var(--font-mono);
-  font-size: 15px;
-  font-weight: 300;
-  line-height: 1;
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas);
+  color: var(--color-muted);
   flex: none;
+  transition: border-color 180ms var(--ease-out), color 180ms var(--ease-out);
+}
+
+@keyframes glyph-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
 }
 
 .copy {
@@ -44,39 +76,32 @@
 
 .title {
   color: var(--color-ink);
-  font-size: 11.5px;
-  font-weight: 520;
-  letter-spacing: -0.015em;
+  font-size: 12.5px;
+  font-weight: 540;
+  letter-spacing: -0.02em;
 }
 
 .hint {
-  margin-top: 2px;
+  margin-top: 3px;
   color: var(--color-faint);
-  font-size: 9.5px;
+  font-size: 10.5px;
   line-height: 1.5;
-}
-
-.busy {
-  margin-top: 5px;
-  color: var(--color-primary-strong);
-  font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 0.01em;
 }
 
 .choose {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
-  padding: 0 11px;
+  height: 34px;
+  padding: 0 14px;
   border: 1px solid var(--color-border-strong);
-  border-radius: 0;
-  background: transparent;
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas);
   color: var(--color-ink);
-  font-size: 9.5px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 540;
   flex: none;
+  transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
 
 .choose:hover {
@@ -92,9 +117,14 @@
   display: none;
 }
 
+/* ---------------------------------------------------------------------------
+   Upload cards
+   --------------------------------------------------------------------------- */
+
 .uploads {
   display: flex;
   flex-direction: column;
+  gap: 9px;
 }
 
 .listHead {
@@ -102,61 +132,143 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 7px;
   color: var(--color-faint);
   font-family: var(--font-mono);
-  font-size: 7.5px;
-  letter-spacing: 0.025em;
+  font-size: 8px;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
-.list {
+.grid {
   list-style: none;
-  border-top: 1px solid var(--color-border);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 9px;
 }
 
-.item {
-  padding: 10px 0 11px;
-  border-bottom: 1px solid var(--color-border);
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 11px;
+  padding: 10px 10px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  animation: card-in 420ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+  transition: border-color 200ms var(--ease-out), transform 200ms var(--ease-out);
 }
 
-.itemTop {
+.card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.cardDone {
+  border-color: var(--color-success-line);
+  animation: card-settle 300ms var(--ease-out) both;
+  animation-delay: 0ms;
+}
+
+.cardError {
+  border-color: var(--color-danger);
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes card-settle {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(-1px) scale(1.006);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.thumb {
+  display: block;
+  width: 46px;
+  height: 58px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  background: var(--color-surface-muted);
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.thumbFallback {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-faint);
 }
 
-.itemName {
+.cardBody {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-right: 16px;
+}
+
+.cardName {
   color: var(--color-ink);
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.itemState {
-  margin-left: auto;
-  color: var(--color-primary-strong);
+.cardMeta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-faint);
   font-family: var(--font-mono);
-  font-size: 7.5px;
-  letter-spacing: 0.015em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  font-size: 8.5px;
 }
 
-.itemDone {
+.state {
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.stateDone {
   color: var(--color-success);
 }
 
-.itemError {
+.stateError {
   color: var(--color-danger);
 }
 
 .track {
-  height: 2px;
-  margin-top: 7px;
+  height: 3px;
+  border-radius: var(--radius-pill);
   background: var(--color-surface-strong);
   overflow: hidden;
 }
@@ -164,89 +276,99 @@
 .fill {
   display: block;
   height: 100%;
-  background: var(--color-primary);
-  transition: width 120ms linear;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 160ms linear;
+}
+
+.cardDone .fill {
+  background: var(--color-success);
 }
 
 .fillError {
   background: var(--color-danger);
 }
 
-.itemFoot {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin-top: 6px;
-  color: var(--color-faint);
-  font-family: var(--font-mono);
-  font-size: 7.5px;
-  line-height: 1.5;
-}
-
-.message {
-  color: var(--color-muted);
-}
-
-.messageError {
+.error {
   color: var(--color-danger);
-}
-
-.openLink {
-  margin-left: auto;
-  color: var(--color-primary-strong);
-  font-family: var(--font-sans);
-  font-size: 9px;
-  border-bottom: 1px solid var(--color-primary);
-  padding-bottom: 1px;
-}
-
-.openLink:hover {
-  color: var(--color-ink);
-  border-color: var(--color-ink);
+  font-size: 9.5px;
+  line-height: 1.45;
 }
 
 .duplicate {
-  margin-top: 6px;
   color: var(--color-warning);
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: 9.5px;
+  line-height: 1.45;
 }
 
-.compact .zone {
-  padding: 12px 0;
+.open {
+  align-self: flex-start;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border-strong);
+  padding-bottom: 1px;
 }
 
-.compact .hint {
-  max-width: 52ch;
+.open:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.dismiss {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-faint);
+  transition: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+}
+
+.dismiss:hover {
+  background: var(--color-surface-strong);
+  color: var(--color-ink);
+}
+
+.compact {
+  gap: 14px;
 }
 
 @media (max-width: 560px) {
   .zone {
-    grid-template-columns: 24px minmax(0, 1fr);
-    gap: 10px;
-    padding: 12px 0;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 11px;
+    padding: 14px;
   }
+
   .choose {
     grid-column: 1 / -1;
     width: 100%;
-    height: 36px;
-    font-size: 10.5px;
+    height: 38px;
   }
-  .mark {
-    width: 22px;
-    height: 22px;
-    font-size: 13px;
+
+  .glyph {
+    width: 30px;
+    height: 30px;
   }
-  .itemTop {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 3px;
+
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .itemState {
-    margin-left: 0;
-  }
-  .openLink {
-    margin-left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .cardDone,
+  .dropping .glyph {
+    animation: none;
   }
 }

@@ -43,7 +43,7 @@ export function SiteFooter() {
         </div>
 
         <p className={styles.wordmark} aria-hidden="true">
-          ParsePilot<span>.</span>
+          Parse<span>Pilot</span>.
         </p>
 
         <div className={styles.grid}>

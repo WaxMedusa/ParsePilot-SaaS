@@ -767,3 +767,58 @@
     border-bottom: 0;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Rounded surface pass
+   The working screens inherit the landing page's softer language: cards and
+   chips get real corners, indicators become pills, and one count sits at the
+   end of each stage row instead of a second paragraph.
+   --------------------------------------------------------------------------- */
+
+.card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+
+
+.chip,
+.tag {
+  border-radius: var(--radius-pill);
+}
+
+.progress,
+.progressBar {
+  border-radius: var(--radius-pill);
+}
+
+.emptyIcon {
+  border-radius: var(--radius-md);
+}
+
+.searchInput {
+  border-radius: var(--radius-sm);
+}
+
+.timelineItem {
+  align-items: baseline;
+}
+
+.timelineLabel {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.timelineCount {
+  margin-left: auto;
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.timelineDot {
+  border-radius: var(--radius-pill);
+}

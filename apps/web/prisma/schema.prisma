@@ -136,6 +136,8 @@ model User {
   email             String    @unique
   passwordHash      String
   name              String?
+  avatarKey         String?
+  avatarUpdatedAt   DateTime?
   emailVerifiedAt   DateTime?
   lastLoginAt       DateTime?
   disabledAt        DateTime?
