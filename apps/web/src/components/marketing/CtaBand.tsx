@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/Button';
+import { Reveal } from '@/components/motion/Reveal';
 import styles from './CtaBand.module.css';
 
 export function CtaBand() {
@@ -12,12 +13,12 @@ export function CtaBand() {
         </div>
 
         <div className={styles.grid}>
-          <h2 className={styles.heading}>
+          <Reveal as="h2" className={styles.heading}>
             Give your finance team
             <br />
             <em className="serif">its afternoons back.</em>
-          </h2>
-          <div className={styles.actions}>
+          </Reveal>
+          <Reveal className={styles.actions} delay={100}>
             <p className={styles.body}>
               Upload a batch of invoices, watch the pipeline run, and export reviewed data as CSV — or XLSX on paid
               plans. The free plan includes 100 pages — enough to judge the output on your own documents.
@@ -29,7 +30,7 @@ export function CtaBand() {
               See pricing <span aria-hidden="true">↗</span>
             </Link>
             <p className={styles.note}>No credit card. Documents deletable at any time.</p>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>

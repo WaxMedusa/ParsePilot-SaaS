@@ -1,0 +1,35 @@
+.track {
+  position: relative;
+  height: var(--scene-height, 280vh);
+  /* Fallback for no JS and for the first paint: show the completed state. */
+  --p: 1;
+}
+
+.sticky {
+  /* The site header is sticky at 76px; the stage pins beneath it. */
+  position: sticky;
+  top: 76px;
+  display: flex;
+  align-items: center;
+  min-height: calc(100vh - 76px);
+  min-height: calc(100svh - 76px);
+  padding: clamp(20px, 4vh, 52px) 0;
+}
+
+.inner {
+  width: 100%;
+}
+
+/* Pinning is a desktop reading device. Below the breakpoint, and for anyone
+   who asked for reduced motion, the scene unpins and reads as a normal flow. */
+@media (max-width: 880px), (prefers-reduced-motion: reduce) {
+  .track {
+    height: auto;
+  }
+
+  .sticky {
+    position: static;
+    min-height: 0;
+    padding: 0;
+  }
+}

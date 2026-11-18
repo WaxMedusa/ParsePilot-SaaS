@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/Button';
+import { Reveal } from '@/components/motion/Reveal';
 import styles from './TrustSection.module.css';
 
 const CONTROLS = [
@@ -31,35 +32,37 @@ export function TrustSection() {
       <div className={`container ${styles.grid}`}>
         <div className={styles.copy}>
           <p className={`kicker ${styles.kicker}`}>07 / Security and privacy</p>
-          <h2 className={styles.heading}>
+          <Reveal as="h2" className={styles.heading}>
             Document data is sensitive.
             <br />
             <em className="serif">We treat it that way.</em>
-          </h2>
-          <p className={styles.body}>
+          </Reveal>
+          <Reveal as="p" className={styles.body} delay={70}>
             ParsePilot handles invoices, vendor records and payment details. The security page describes exactly what is
             implemented today — including what is not. There are no invented certifications on this site.
-          </p>
-          <div className={styles.actions}>
+          </Reveal>
+          <Reveal className={styles.actions} delay={120}>
             <ButtonLink href="/security" variant="inverse" iconAfter={<span aria-hidden="true">↗</span>}>
               Read the security page
             </ButtonLink>
             <Link href="/subprocessors" className={styles.textLink}>
               See subprocessors
             </Link>
-          </div>
-          <p className={styles.note}>No badges. No unearned claims. Just the controls we can point to.</p>
+          </Reveal>
+          <Reveal as="p" className={styles.note} delay={160}>
+            No badges. No unearned claims. Just the controls we can point to.
+          </Reveal>
         </div>
 
         <div className={styles.controls}>
-          {CONTROLS.map((control) => (
-            <article key={control.index} className={styles.control}>
+          {CONTROLS.map((control, index) => (
+            <Reveal as="article" key={control.index} className={styles.control} delay={index * 70}>
               <span className={styles.index}>{control.index}</span>
               <div>
                 <h3 className={styles.controlTitle}>{control.title}</h3>
                 <p className={styles.controlBody}>{control.body}</p>
               </div>
-            </article>
+            </Reveal>
           ))}
         </div>
       </div>

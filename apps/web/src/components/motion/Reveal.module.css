@@ -1,0 +1,19 @@
+.reveal {
+  transition:
+    opacity 680ms var(--ease-out) var(--reveal-delay, 0ms),
+    transform 820ms var(--ease-out) var(--reveal-delay, 0ms);
+}
+
+:global(html[data-motion='ready']) .reveal:not([data-revealed='true']) {
+  opacity: 0;
+  transform: translate3d(0, var(--reveal-distance, 20px), 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  :global(html[data-motion='ready']) .reveal:not([data-revealed='true']) {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

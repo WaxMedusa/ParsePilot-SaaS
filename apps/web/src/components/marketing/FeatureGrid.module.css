@@ -62,7 +62,15 @@
   align-items: start;
   padding: 25px 0 28px;
   border-bottom: 1px solid var(--color-border);
-  transition: background-color var(--duration-base) var(--ease-out);
+}
+
+/* Two classes so the reveal timing wins over the generic motion rule without
+   dropping the hover wash. */
+.ledger .row {
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    opacity 680ms var(--ease-out) var(--reveal-delay, 0ms),
+    transform 820ms var(--ease-out) var(--reveal-delay, 0ms);
 }
 
 .row:last-child {

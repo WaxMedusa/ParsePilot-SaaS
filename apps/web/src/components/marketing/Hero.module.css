@@ -64,6 +64,39 @@
   display: block;
 }
 
+/* Each line sits in its own clipping box so the words rise into place. The
+   negative margin keeps the descenders from being cut by the clip. */
+.line {
+  overflow: hidden;
+  padding-bottom: 0.26em;
+  margin-bottom: -0.26em;
+}
+
+.lineInner {
+  animation: line-in 940ms var(--ease-out) both;
+}
+
+.line:nth-child(1) .lineInner {
+  animation-delay: 60ms;
+}
+
+.line:nth-child(2) .lineInner {
+  animation-delay: 150ms;
+}
+
+.line:nth-child(3) .lineInner {
+  animation-delay: 240ms;
+}
+
+@keyframes line-in {
+  from {
+    transform: translate3d(0, 106%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .headline em {
   color: var(--color-primary);
   font-size: 1.04em;

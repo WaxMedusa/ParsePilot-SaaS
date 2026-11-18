@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Reveal } from '@/components/motion/Reveal';
 import styles from './UseCases.module.css';
 
 const CASES = [
@@ -34,15 +35,15 @@ export function UseCases() {
       <div className={`container ${styles.inner}`}>
         <div className={styles.header}>
           <p className="kicker">06 / Where it fits</p>
-          <h2 className={styles.heading}>
+          <Reveal as="h2" className={styles.heading}>
             One extraction layer.
             <br />
             <em className="serif">Several ways to use it.</em>
-          </h2>
+          </Reveal>
         </div>
 
         <div className={styles.grid}>
-          <div className={styles.intro}>
+          <Reveal className={styles.intro} delay={60}>
             <p>
               ParsePilot is built for teams that already have a process — and need the document work to be more
               reliable, not more theatrical.
@@ -50,26 +51,26 @@ export function UseCases() {
             <Link href="/#product" className={styles.link}>
               Explore the operating layer <span aria-hidden="true">↗</span>
             </Link>
-          </div>
+          </Reveal>
 
           <div className={styles.cases}>
-            {CASES.map((item) => (
-              <article key={item.index} className={styles.case}>
+            {CASES.map((item, index) => (
+              <Reveal as="article" key={item.index} className={styles.case} delay={index * 60}>
                 <span className={styles.caseIndex}>{item.index}</span>
                 <div className={styles.caseMain}>
                   <span className={styles.caseMeta}>{item.meta}</span>
                   <h3 className={styles.caseTitle}>{item.title}</h3>
                   <p className={styles.caseBody}>{item.body}</p>
                 </div>
-              </article>
+              </Reveal>
             ))}
           </div>
         </div>
 
-        <div className={styles.quote}>
+        <Reveal className={styles.quote} delay={80}>
           <p>“Every document gets the same question: can we defend this number?”</p>
           <span>ParsePilot / operating principle</span>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

@@ -1,3 +1,4 @@
+import { Reveal } from '@/components/motion/Reveal';
 import styles from './FeatureGrid.module.css';
 
 const FEATURES = [
@@ -46,37 +47,37 @@ export function FeatureGrid() {
         <header className={styles.header}>
           <p className="kicker">03 / The operating layer</p>
           <div className={styles.headerGrid}>
-            <h2 className={styles.heading}>
+            <Reveal as="h2" className={styles.heading}>
               Built for the <em className="serif">messy middle</em>
               <br />
               of document work.
-            </h2>
-            <div className={styles.headerCopy}>
+            </Reveal>
+            <Reveal className={styles.headerCopy} delay={90}>
               <p>
                 Extraction is the easy part to demo and the hard part to operate. ParsePilot is designed around the
                 operational details: retries, duplicates, review, corrections and the audit trail that a finance team
                 needs before it trusts a number.
               </p>
               <span className={styles.headerNote}>Six capabilities / one system of record</span>
-            </div>
+            </Reveal>
           </div>
         </header>
 
         <div className={styles.ledger}>
-          {FEATURES.map((feature) => (
-            <article key={feature.index} className={styles.row}>
+          {FEATURES.map((feature, index) => (
+            <Reveal as="article" key={feature.index} className={styles.row} delay={index * 55}>
               <span className={styles.index}>{feature.index}</span>
               <h3 className={styles.title}>{feature.title}</h3>
               <p className={styles.body}>{feature.body}</p>
               <span className={styles.meta}>{feature.meta}</span>
-            </article>
+            </Reveal>
           ))}
         </div>
 
-        <div className={styles.closing}>
+        <Reveal className={styles.closing} delay={80}>
           <p>One pipeline records the value, the source and the decision.</p>
           <span>No black boxes / no silent overwrites</span>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

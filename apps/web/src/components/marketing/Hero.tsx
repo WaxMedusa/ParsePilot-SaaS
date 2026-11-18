@@ -32,18 +32,24 @@ export function Hero() {
 
         <div className={styles.copy}>
           <h1 className={styles.headline}>
-            <span>Turn invoices</span>
-            <span>into data your team</span>
-            <span>
-              can <em className="serif">trust.</em>
+            <span className={styles.line}>
+              <span className={styles.lineInner}>Turn invoices</span>
+            </span>
+            <span className={styles.line}>
+              <span className={styles.lineInner}>into data your team</span>
+            </span>
+            <span className={styles.line}>
+              <span className={styles.lineInner}>
+                can <em className="serif">trust.</em>
+              </span>
             </span>
           </h1>
-          <p className={styles.description}>
+          <p className={`${styles.description} rise-in rise-in-delay-1`}>
             ParsePilot reads native PDFs and scans, extracts line-item detail, validates the arithmetic, and routes
             anything uncertain to a human review queue. Every correction is versioned, and every value is traceable
             back to the source document.
           </p>
-          <div className={styles.actions}>
+          <div className={`${styles.actions} rise-in rise-in-delay-2`}>
             <ButtonLink href="/signup" size="lg" iconAfter={<span aria-hidden="true">↗</span>}>
               Start free — 100 pages
             </ButtonLink>
@@ -51,10 +57,12 @@ export function Hero() {
               See the pipeline <span aria-hidden="true">↓</span>
             </Link>
           </div>
-          <p className={styles.finePrint}>No credit card. Private storage. Delete documents at any time.</p>
+          <p className={`${styles.finePrint} rise-in rise-in-delay-3`}>
+            No credit card. Private storage. Delete documents at any time.
+          </p>
         </div>
 
-        <div className={styles.visual}>
+        <div className={`${styles.visual} rise-in rise-in-delay-2`}>
           <ProductPreview />
           <div className={styles.caption}>
             <span>Illustrative workspace</span>
