@@ -68,22 +68,27 @@ def validate(fields: list[dict[str, Any]]) -> tuple[list[str], bool]:
             warnings.append(f"missing_required:{key}")
 
     subtotal = _decimal(values, "subtotal")
+    discount = _decimal(values, "discount_amount")
     tax = _decimal(values, "tax_amount")
     total = _decimal(values, "total_amount")
     amount_paid = _decimal(values, "amount_paid")
+    # A discount is stored as a positive magnitude and reduces the net amount.
+    discount_value = discount if discount is not None else Decimal("0")
 
     if subtotal is not None and tax is not None and total is not None:
-        if abs((subtotal + tax) - total) > Decimal("0.02"):
+        if abs((subtotal + tax - discount_value) - total) > Decimal("0.02"):
             warnings.append("totals_inconsistent")
     if total is not None and total >= 0:
-        if subtotal is not None and subtotal > total + Decimal("0.02"):
+        if subtotal is not None and (subtotal - discount_value) > total + Decimal("0.02"):
             warnings.append("subtotal_exceeds_total")
         if tax is not None and tax > total + Decimal("0.02"):
             warnings.append("tax_exceeds_total")
 
     line_items = _line_item_sum(values.get("line_items"))
     if line_items is not None and subtotal is not None:
-        if abs(line_items - subtotal) > Decimal("0.02"):
+        # Line items may be listed before or after the discount is applied.
+        targets = (subtotal, subtotal - discount_value)
+        if all(abs(line_items - target) > Decimal("0.02") for target in targets):
             warnings.append("line_items_inconsistent")
 
     if amount_paid is not None and total is not None and amount_paid > total + Decimal("0.02"):

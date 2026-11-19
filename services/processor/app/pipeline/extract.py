@@ -527,6 +527,14 @@ _TAX_LABEL = re.compile(
     re.I,
 )
 
+_DISCOUNT_LABEL = re.compile(
+    r"^(?:total\s+discount|discount\s+amount|discounts?|less\s*:?\s*discount|"
+    r"trade\s+discount|early\s+payment\s+discount|disc\.|rabatt|nachlass|skonto|"
+    r"remise|descuento|sconto|korting|r[eé]duction)"
+    r"\s*(?:[:\-–|(]|$|\d)",
+    re.I,
+)
+
 _TOTAL_LABEL_HIGH = re.compile(
     r"^(?:grand\s+total|total\s+due|amount\s+due|balance\s+due|invoice\s+total|total\s+amount|"
     r"amount\s+payable|total\s+payable|payable|zahlbetrag|rechnungsbetrag|gesamtbetrag|gesamt|"
@@ -595,6 +603,24 @@ def _tax_from_lines(lines: list[str]) -> str | None:
         values = _amount_candidates(line)
         if values:
             return values[-1]
+    return None
+
+
+def _discount_from_lines(lines: list[str]) -> str | None:
+    """Reads a standalone discount line as a positive magnitude.
+
+    Discounts are printed as ``Discount (10%): -100.00`` or ``Rabatt: 100,00``;
+    the percentage is dropped by _amount_candidates, and the sign is dropped
+    here so validation can subtract the value from the subtotal.
+    """
+    for line in reversed(lines):
+        if not _DISCOUNT_LABEL.match(line):
+            continue
+        values = _amount_candidates(line)
+        if not values:
+            continue
+        value = values[-1]
+        return value[1:] if value.startswith("-") else value
     return None
 
 
@@ -776,6 +802,7 @@ def extract_rules(text: str) -> dict[str, Any]:
         "due_date": normalize_date(due_raw, date_order) if due_raw else None,
         "currency": currency,
         "subtotal": _subtotal_from_lines(lines),
+        "discount_amount": _discount_from_lines(lines),
         "tax_amount": _tax_from_lines(lines),
         "total_amount": _total_from_lines(lines),
         "amount_paid": _amount_paid_from_lines(lines),
@@ -794,7 +821,7 @@ def extract_rules(text: str) -> dict[str, Any]:
 
 def _confidence_for(key: str, rules: dict[str, Any]) -> float:
     if rule := rules.get(key):
-        if key in {"total_amount", "subtotal", "tax_amount", "issue_date", "currency"}:
+        if key in {"total_amount", "subtotal", "discount_amount", "tax_amount", "issue_date", "currency"}:
             return 0.9
         if key in {"vendor_name", "document_number", "customer_name"}:
             return 0.78
@@ -869,6 +896,10 @@ AI_SCHEMA = {
         "due_date": {"type": ["string", "null"], "description": "ISO 8601 date (YYYY-MM-DD)"},
         "currency": {"type": ["string", "null"], "description": "ISO 4217 code"},
         "subtotal": {"type": ["string", "null"], "description": "Decimal string with two places"},
+        "discount_amount": {
+            "type": ["string", "null"],
+            "description": "Positive decimal string for the total discount deducted from the subtotal",
+        },
         "tax_amount": {"type": ["string", "null"], "description": "Decimal string with two places"},
         "total_amount": {"type": ["string", "null"], "description": "Decimal string with two places"},
         "amount_paid": {"type": ["string", "null"]},
@@ -950,6 +981,8 @@ def ai_extract(
                     "Never invent values. vendor_name is the seller or issuer, never the bill-to customer or "
                     "the document heading. customer_name is the buyer. document_title is only the heading. "
                     "Ignore line-item totals when choosing total_amount; choose the final amount due. "
+                    "Set discount_amount to the total discount already deducted from the amount due, as a "
+                    "positive number, and use null when the document shows no discount. "
                     "Dates must be ISO 8601 and amounts decimal strings. line_items must be a JSON array of "
                     "objects with description, quantity, unit_price and amount. Return only the JSON object."
                 ),

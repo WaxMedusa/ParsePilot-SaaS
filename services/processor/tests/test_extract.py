@@ -38,6 +38,29 @@ def test_extract_rules_invoice_fields():
     assert fields["iban"].startswith("GB33")
 
 
+def test_discount_amount_is_extracted_as_a_positive_magnitude():
+    text = """
+ACME SUPPLY LTD
+Invoice Number: INV-2026-0099
+Invoice Date: 2026-03-14
+Currency: USD
+Subtotal: 1,000.00
+Discount (10%): -100.00
+Sales Tax 8.25%: 74.25
+Total: 974.25
+"""
+    fields = extract_rules(text)
+    assert fields["subtotal"] == "1000.00"
+    assert fields["discount_amount"] == "100.00"
+    assert fields["tax_amount"] == "74.25"
+    assert fields["total_amount"] == "974.25"
+
+
+def test_discount_percentage_without_an_amount_is_not_a_discount():
+    fields = extract_rules("ACME\nInvoice Date: 2026-03-14\nCurrency: USD\nSubtotal: 10.00\nDiscount 10%\nTotal: 10.00\n")
+    assert "discount_amount" not in fields
+
+
 def test_vendor_heading_is_not_treated_as_vendor_name():
     text = """INVOICE
 East Repair Inc.

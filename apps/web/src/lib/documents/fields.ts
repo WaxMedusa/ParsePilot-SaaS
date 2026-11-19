@@ -26,6 +26,7 @@ export const FIELD_DEFINITIONS: FieldDefinition[] = [
   { key: 'due_date', label: 'Due date', type: 'date', group: 'dates' },
   { key: 'currency', label: 'Currency', type: 'currency', group: 'amounts' },
   { key: 'subtotal', label: 'Subtotal', type: 'decimal', group: 'amounts' },
+  { key: 'discount_amount', label: 'Discount', type: 'decimal', group: 'amounts' },
   { key: 'tax_amount', label: 'Tax amount', type: 'decimal', group: 'amounts' },
   { key: 'total_amount', label: 'Total amount', type: 'decimal', group: 'amounts' },
   { key: 'amount_paid', label: 'Amount paid', type: 'decimal', group: 'amounts' },
@@ -260,15 +261,24 @@ export function validateExtraction(fields: IncomingField[]): ExtractionValidatio
 
   const valueOf = (key: string) => validated.find((field) => field.key === key)?.normalizedValue ?? null;
   const subtotal = decimalToCents(valueOf('subtotal'));
+  const discount = decimalToCents(valueOf('discount_amount'));
   const tax = decimalToCents(valueOf('tax_amount'));
   const total = decimalToCents(valueOf('total_amount'));
+  // A discount is stored as a positive magnitude and reduces the net amount.
+  const discountCents = discount ?? 0;
   let totalsConsistent: boolean | null = null;
   if (subtotal !== null && tax !== null && total !== null) {
-    totalsConsistent = Math.abs(subtotal + tax - total) <= 2;
-    if (!totalsConsistent) issues.push('subtotal + tax_amount does not equal total_amount');
+    totalsConsistent = Math.abs(subtotal - discountCents + tax - total) <= 2;
+    if (!totalsConsistent) {
+      issues.push(
+        discount === null
+          ? 'subtotal + tax_amount does not equal total_amount'
+          : 'subtotal - discount_amount + tax_amount does not equal total_amount',
+      );
+    }
   }
   if (total !== null && total >= 0) {
-    if (subtotal !== null && subtotal > total + 2) issues.push('subtotal exceeds total_amount');
+    if (subtotal !== null && subtotal - discountCents > total + 2) issues.push('subtotal exceeds total_amount');
     if (tax !== null && tax > total + 2) issues.push('tax_amount exceeds total_amount');
   }
   if (total !== null && total < 0) issues.push('total_amount is negative');
@@ -287,8 +297,12 @@ export function validateExtraction(fields: IncomingField[]): ExtractionValidatio
           const amount = item && typeof item === 'object' ? decimalToCents(String((item as { amount?: unknown }).amount ?? '')) : null;
           return amount === null ? sum : sum + amount;
         }, 0);
-        if (subtotal !== null && Math.abs(lineTotal - subtotal) > 2) {
-          issues.push('line items do not add up to subtotal');
+        if (subtotal !== null) {
+          // Line items may be listed before or after the discount is applied.
+          const targets = discount === null ? [subtotal] : [subtotal, subtotal - discount];
+          if (!targets.some((target) => Math.abs(lineTotal - target) <= 2)) {
+            issues.push('line items do not add up to subtotal');
+          }
         }
       }
     } catch {
