@@ -26,7 +26,10 @@ describe('secret box', () => {
     const sealed = sealSecret('sk-test-1234567890', 'workspace-a');
     expect(openSecret(sealed, 'workspace-a')).toBe('sk-test-1234567890');
     expect(() => openSecret(sealed, 'workspace-b')).toThrow();
-    const tampered = `${sealed.slice(0, -1)}A`;
+    // The IV is random, so appending a fixed "A" sometimes reproduces the
+    // original envelope and the tamper never happens. Force a real change.
+    const tampered = `${sealed.slice(0, -1)}${sealed.endsWith('A') ? 'B' : 'A'}`;
+    expect(tampered).not.toBe(sealed);
     expect(() => openSecret(tampered, 'workspace-a')).toThrow();
   });
 });
