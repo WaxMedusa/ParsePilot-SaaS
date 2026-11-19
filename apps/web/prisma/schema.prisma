@@ -158,28 +158,8 @@ model User {
   fieldEdits        ExtractionField[]     @relation("FieldEditor")
   cookieConsent     CookieConsent?
   aiSettingsUpdates AiSettings[]           @relation("AiSettingsUpdater")
-  storageConnection StorageConnection?
 
   @@index([createdAt])
-}
-
-/// Optional per-account object storage. Tokens are encrypted at rest with
-/// SETTINGS_ENCRYPTION_KEY and never leave the server.
-model StorageConnection {
-  id                   String    @id @default(uuid()) @db.Uuid
-  userId               String    @unique @db.Uuid
-  provider             String    @default("google-drive")
-  accountEmail         String?
-  folderId             String?
-  accessToken          String?
-  refreshToken         String
-  accessTokenExpiresAt DateTime?
-  scope                String?
-  lastError            String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Workspace {

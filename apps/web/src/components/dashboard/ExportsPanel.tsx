@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, ButtonLink } from '@/components/ui/Button';
 import { apiRequest, errorMessage } from '@/lib/client/api';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import styles from './Dashboard.module.css';
@@ -25,14 +25,19 @@ export function ExportsPanel({
   workspaceId,
   canCreate,
   xlsxAllowed,
+  liveUrl,
+  liveXlsxUrl,
 }: {
   initialExports: ExportRow[];
   workspaceId: string;
   canCreate: boolean;
   xlsxAllowed: boolean;
+  liveUrl: string;
+  liveXlsxUrl: string;
 }) {
   const [exports, setExports] = useState<ExportRow[]>(initialExports);
   const [busy, setBusy] = useState<string | null>(null);
+  const [copied, setCopied] = useState<'page' | 'xlsx' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollTimer = useRef<number | undefined>(undefined);
 
@@ -105,7 +110,7 @@ export function ExportsPanel({
         cache: 'no-store',
       });
       if (!response.ok) {
-        let message = 'The live workbook could not be built.';
+        let message = 'The workbook could not be built.';
         try {
           const payload = (await response.json()) as { error?: { message?: string } };
           message = payload.error?.message ?? message;
@@ -133,35 +138,96 @@ export function ExportsPanel({
     }
   };
 
+  const copyLink = async (value: string, target: 'page' | 'xlsx') => {
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(target);
+      window.setTimeout(() => setCopied(null), 1_800);
+    } catch {
+      setError('The link could not be copied. Select the field and copy it manually.');
+    }
+  };
+
   return (
     <div className={styles.page}>
       <section className={styles.card}>
         <div className={styles.cardHead}>
-          <span className={styles.cardTitle}>Live XLSX</span>
-          <span className={styles.cardHint}>always current · no expiry</span>
+          <span className={styles.cardTitle}>Live workbook</span>
+          <span className={styles.cardHint}>permanent link · rebuilt on every open</span>
         </div>
         <div className={styles.cardBody}>
           <p className={styles.sectionBody}>
-            One workbook, built from every completed and needs-review document at the moment you download it. New
-            uploads, processing results and field corrections are included automatically — there is no stale snapshot
-            to regenerate.
+            The browser link opens a page read from the workspace on every load — and every minute while it stays
+            open — so it always shows the latest uploads, processing results and field corrections. Save it as a
+            bookmark; it never expires. The Excel link serves the same data as a workbook for <strong>Data → Get Data →
+            From Other Sources → From Web</strong>, which you can then refresh in place.
           </p>
-          <div className={styles.actions} style={{ marginTop: 14 }}>
+          <div className={styles.formRow} style={{ marginTop: 14 }}>
+            <label className={styles.label} htmlFor="live-browser-url">
+              Browser link
+            </label>
+            <input
+              id="live-browser-url"
+              className={styles.input}
+              readOnly
+              value={xlsxAllowed ? liveUrl : 'XLSX exports are included on Starter and above.'}
+              onFocus={(event) => event.currentTarget.select()}
+            />
+          </div>
+          <div className={styles.actions}>
             <Button
               variant="secondary"
               icon={<FileSpreadsheet />}
+              onClick={() => copyLink(liveUrl, 'page')}
+              disabled={!xlsxAllowed || busy !== null}
+              title={xlsxAllowed ? undefined : 'XLSX exports are included on Starter and above.'}
+            >
+              {copied === 'page' ? 'Copied' : 'Copy browser link'}
+            </Button>
+            {xlsxAllowed ? (
+              <ButtonLink href={liveUrl} external variant="secondary" size="md" icon={<ExternalLink />}>
+                Open live view
+              </ButtonLink>
+            ) : null}
+            <Button
+              variant="secondary"
+              icon={<Download />}
               onClick={downloadLive}
               disabled={busy !== null || !xlsxAllowed}
               title={xlsxAllowed ? undefined : 'XLSX exports are included on Starter and above.'}
             >
-              {busy === 'live' ? 'Building workbook…' : 'Download live XLSX'}
+              {busy === 'live' ? 'Building workbook…' : 'Download snapshot'}
             </Button>
-            <span className={styles.hint}>
-              {xlsxAllowed
-                ? 'Updates with the workspace · includes edited values'
-                : 'XLSX is included on Starter and above · CSV is available on every plan'}
-            </span>
           </div>
+          <div className={styles.formRow} style={{ marginTop: 16 }}>
+            <label className={styles.label} htmlFor="live-excel-url">
+              Excel link (.xlsx)
+            </label>
+            <input
+              id="live-excel-url"
+              className={styles.input}
+              readOnly
+              value={xlsxAllowed ? liveXlsxUrl : 'XLSX exports are included on Starter and above.'}
+              onFocus={(event) => event.currentTarget.select()}
+            />
+          </div>
+          <div className={styles.actions}>
+            <Button
+              variant="secondary"
+              icon={<FileSpreadsheet />}
+              onClick={() => copyLink(liveXlsxUrl, 'xlsx')}
+              disabled={!xlsxAllowed || busy !== null}
+              title={xlsxAllowed ? undefined : 'XLSX exports are included on Starter and above.'}
+            >
+              {copied === 'xlsx' ? 'Copied' : 'Copy Excel link'}
+            </Button>
+          </div>
+          <p className={styles.hint} style={{ marginTop: 10 }}>
+            {xlsxAllowed
+              ? 'Both links are a private key for this workspace: anyone who has them can view this data. Rotating DOWNLOAD_SIGNING_SECRET revokes them.'
+              : 'XLSX is included on Starter and above · CSV is available on every plan'}
+          </p>
         </div>
       </section>
 
@@ -215,7 +281,7 @@ export function ExportsPanel({
             <p className={styles.emptyTitle}>No exports yet</p>
             <p className={styles.emptyBody}>
               {xlsxAllowed
-                ? 'Download the live XLSX above for the current data, or create a CSV snapshot with the full field set, including corrections.'
+                ? 'Use the live workbook link above for current data, or create a CSV snapshot with the full field set, including corrections.'
                 : 'Create a CSV snapshot with the full field set, including corrections. XLSX exports are included on Starter and above.'}
             </p>
           </div>

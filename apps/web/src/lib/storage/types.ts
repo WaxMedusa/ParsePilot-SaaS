@@ -10,7 +10,7 @@ export type StoragePutOptions = {
 };
 
 export interface StorageProvider {
-  readonly driver: 'local' | 's3' | 'supabase' | 'google-drive';
+  readonly driver: 'local' | 's3' | 'supabase';
   putObject(key: string, body: Uint8Array, options: StoragePutOptions): Promise<void>;
   getObject(key: string): Promise<Uint8Array>;
   deleteObject(key: string): Promise<void>;

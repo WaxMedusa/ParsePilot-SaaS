@@ -5,8 +5,6 @@ import { getUsageSnapshot } from '@/lib/billing/usage';
 import { avatarUrl } from '@/lib/profile/avatar';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { ProfileSettings } from '@/components/dashboard/ProfileSettings';
-import { StorageSettings } from '@/components/dashboard/StorageSettings';
-import { getDriveStatus } from '@/lib/integrations/google-drive';
 import styles from '@/components/dashboard/ProfileSettings.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -22,21 +20,14 @@ function initialsOf(name: string | null, email: string): string {
     .toUpperCase();
 }
 
-export default async function ProfileSettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function ProfileSettingsPage() {
   const auth = await requireWorkspaceAuth();
-  const params = await searchParams;
-  const driveState = typeof params.drive === 'string' ? params.drive : null;
-  const [user, usage, driveStatus] = await Promise.all([
+  const [user, usage] = await Promise.all([
     prisma.user.findUnique({
       where: { id: auth.user.id },
       select: { email: true, name: true, avatarUpdatedAt: true, emailVerifiedAt: true },
     }),
     getUsageSnapshot(auth.workspace.id),
-    getDriveStatus(auth.user.id).catch(() => null),
   ]);
 
   const premium = auth.workspace.planCode !== 'free';
@@ -64,8 +55,6 @@ export default async function ProfileSettingsPage({
             avatarUrl={avatarUrl(user?.avatarUpdatedAt)}
             emailVerified={Boolean(user?.emailVerifiedAt)}
           />
-
-          <StorageSettings status={driveStatus} driveState={driveState} />
         </div>
 
         <aside className={styles.aside}>

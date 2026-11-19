@@ -25,80 +25,30 @@ import { resolveFieldValue } from './fields';
  * reachable through short-lived signed URLs minted here.
  */
 
-/**
- * Chooses where a new document's bytes go. A connected Google Drive takes
- * them (the user's own quota); otherwise the deployment's storage does.
- */
-async function resolveUploadTarget(userId: string, workspaceId: string, extension: string) {
-  // The table may not exist on a deployment that has not migrated yet; that is
-  // not a reason to reject an upload.
-  const connection = await Promise.resolve()
-    .then(() => prisma.storageConnection.findUnique({ where: { userId }, select: { id: true } }))
-    .catch(() => null);
-
-  if (connection) {
-    const [{ GoogleDriveStorage, driveStorageKey }, { reserveDriveFileId }] = await Promise.all([
-      import('../storage/google-drive'),
-      import('../integrations/google-drive'),
-    ]);
-    const fileId = await reserveDriveFileId(userId).catch(() => null);
-    if (fileId) {
-      return {
-        storage: new GoogleDriveStorage(userId) as StorageProvider,
-        storageKey: driveStorageKey(userId, fileId, extension),
-      };
-    }
-    logger.warn('drive_id_reservation_failed', { userId });
-  }
-
-  return { storage: getStorage(), storageKey: generateStorageKey(workspaceId, extension) };
-}
-
-/** Writes the accepted bytes, falling back to deployment storage if Drive fails. */
+/** Writes the accepted bytes to the deployment's configured object storage. */
 async function storeUpload(input: {
-  userId: string;
   workspaceId: string;
   extension: string;
   bytes: Uint8Array;
   mime: string;
   checksumSha256: string;
 }): Promise<{ storageKey: string; driver: StorageProvider['driver'] }> {
-  const target = await resolveUploadTarget(input.userId, input.workspaceId, input.extension);
+  const storage = getStorage();
+  const storageKey = generateStorageKey(input.workspaceId, input.extension);
 
   try {
-    await target.storage.putObject(target.storageKey, input.bytes, {
+    await storage.putObject(storageKey, input.bytes, {
       contentType: input.mime,
       checksumSha256: input.checksumSha256,
     });
-    return { storageKey: target.storageKey, driver: target.storage.driver };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown';
-
-    if (target.storage.driver !== 'google-drive') {
-      await increment('upload_storage_failures');
-      logger.error('upload_storage_failed', { workspaceId: input.workspaceId, message });
-      throw ApiError.unavailable('The document could not be stored. Please try again.');
-    }
-
-    // Revoked access, a full Drive or a transient Google error must not lose
-    // the user's upload: it lands in the deployment's storage instead.
-    logger.warn('drive_upload_failed_falling_back', { workspaceId: input.workspaceId, message });
-    await prisma.storageConnection
-      .updateMany({ where: { userId: input.userId }, data: { lastError: message.slice(0, 300) } })
-      .catch(() => undefined);
-
-    const storage = getStorage();
-    const storageKey = generateStorageKey(input.workspaceId, input.extension);
-    try {
-      await storage.putObject(storageKey, input.bytes, {
-        contentType: input.mime,
-        checksumSha256: input.checksumSha256,
-      });
-    } catch {
-      await increment('upload_storage_failures');
-      throw ApiError.unavailable('The document could not be stored. Please try again.');
-    }
     return { storageKey, driver: storage.driver };
+  } catch (error) {
+    await increment('upload_storage_failures');
+    logger.error('upload_storage_failed', {
+      workspaceId: input.workspaceId,
+      message: error instanceof Error ? error.message : 'unknown',
+    });
+    throw ApiError.unavailable('The document could not be stored. Please try again.');
   }
 }
 
@@ -202,7 +152,6 @@ async function persistDocument(input: PersistUploadInput) {
     await increment('uploads_deduplicated');
   } else {
     const stored = await storeUpload({
-      userId: input.userId,
       workspaceId: input.workspaceId,
       extension: validated.extension,
       bytes: validated.bytes,

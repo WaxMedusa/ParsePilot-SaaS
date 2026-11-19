@@ -1,21 +1,18 @@
 import { prisma } from '../prisma';
 import { getStorage } from './index';
-import { parseDriveKey } from './google-drive';
 import type { StorageProvider } from './types';
 
 /**
- * Storage routing and shared-object safety.
+ * Shared-object safety.
  *
  * Two documents can share one object after a checksum dedupe, so deleting a
  * document must only remove the bytes when nothing else still points at them.
+ * Every object lives in the deployment's configured storage driver.
  */
 
 /** Resolves the driver that owns an object key, without a session. */
-export async function getStorageForKey(key: string): Promise<StorageProvider> {
-  const drive = parseDriveKey(key);
-  if (!drive) return getStorage();
-  const { GoogleDriveStorage } = await import('./google-drive');
-  return new GoogleDriveStorage(drive.userId);
+export async function getStorageForKey(_key: string): Promise<StorageProvider> {
+  return getStorage();
 }
 
 export type UnreferencedDeleteResult = { deleted: boolean; shared: boolean };

@@ -1,5 +1,6 @@
 import { requireWorkspaceAuth } from '@/lib/auth/server';
 import { listExports } from '@/lib/exports/service';
+import { liveWorkbookPageUrl, liveWorkbookXlsxUrl } from '@/lib/exports/live-token';
 import { getUsageSnapshot } from '@/lib/billing/usage';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { ExportsPanel } from '@/components/dashboard/ExportsPanel';
@@ -25,7 +26,7 @@ export default async function ExportsPage() {
         title="Exports"
         description={
           xlsxAllowed
-            ? 'Download the always-current XLSX workbook, or create an expiring CSV/XLSX snapshot built by the background worker.'
+            ? 'Open the permanent live view in your browser, connect the .xlsx link to Excel, or create an expiring CSV/XLSX snapshot built by the background worker.'
             : 'Create an expiring CSV snapshot built by the background worker. XLSX exports are included on Starter and above.'
         }
       />
@@ -33,6 +34,8 @@ export default async function ExportsPage() {
         workspaceId={auth.workspace.id}
         canCreate={canCreate}
         xlsxAllowed={xlsxAllowed}
+        liveUrl={liveWorkbookPageUrl(auth.workspace.id)}
+        liveXlsxUrl={liveWorkbookXlsxUrl(auth.workspace.id)}
         initialExports={exports.map((entry) => ({
           id: entry.id,
           format: entry.format,

@@ -101,14 +101,6 @@ export const appConfig = {
       | 'AES256'
       | undefined,
   },
-  googleDrive: {
-    // Optional. Without both values the Google Drive connection stays hidden
-    // and every document keeps using the deployment's own storage.
-    clientId: optionalEnv('GOOGLE_OAUTH_CLIENT_ID'),
-    clientSecret: optionalEnv('GOOGLE_OAUTH_CLIENT_SECRET'),
-    folderName: optionalEnv('GOOGLE_DRIVE_FOLDER_NAME', 'ParsePilot'),
-    redirectUri: optionalEnv('GOOGLE_OAUTH_REDIRECT_URI', `${appUrl}/api/v1/integrations/google-drive/callback`),
-  },
   supabaseStorage: {
     url: optionalEnv('SUPABASE_URL', optionalEnv('NEXT_PUBLIC_SUPABASE_URL')),
     serviceRoleKey: optionalEnv('SUPABASE_SERVICE_ROLE_KEY'),
