@@ -1,43 +1,21 @@
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
   color: var(--color-ink);
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1;
 }
 
 .logo:hover {
   color: var(--color-ink);
 }
 
-/* Sized at the artwork's proportions (246 x 198). No plate or box: the mark is
-   flat, and `currentColor` lets the ink half flip with the theme. */
-/* The mark is deliberately ~1.5x the cap height of the wordmark: at the
-   artwork's own proportions the gap between bar and sweep closes up below
-   about 22px and the shapes smear into one blob. */
+/* The primary logo artwork. Height-driven so the artwork keeps its own
+   proportions at any size; max-width keeps a wide lockup inside the nav. */
 .mark {
   display: block;
-  width: 31.1px;
-  height: 25px;
-  flex: none;
-}
-
-.mark svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.word {
-  line-height: 1;
-  transform: translateY(0.5px);
-}
-
-.wordAccent {
-  color: var(--color-accent);
+  height: 28px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
 }
 
 .inverse {
@@ -46,9 +24,4 @@
 
 .inverse:hover {
   color: var(--color-on-dark);
-}
-
-/* On the dark panels the burnt orange needs the lifted shade to stay clear. */
-.inverse .wordAccent {
-  color: var(--color-accent-bright);
 }

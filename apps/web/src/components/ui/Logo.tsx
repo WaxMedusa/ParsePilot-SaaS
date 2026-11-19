@@ -2,24 +2,15 @@ import Link from 'next/link';
 import styles from './Logo.module.css';
 
 /**
- * The brand lockup: a flat mark (bar, accent triangle, rounded sweep) beside a
- * two-tone wordmark. The mark is drawn to the artwork's own proportions
- * (246 x 198) and inherits the ink colour, so it flips with the theme while the
- * triangle stays burnt orange.
+ * The brand lockup: the primary logo artwork served from `/mainlogo.png`.
+ * The image is height-driven so it keeps its own proportions at every size,
+ * and it carries the artwork's colours, so `tone` only affects the link colour
+ * around it (the artwork itself does not recolour with the theme).
  */
 export function Logo({ href = '/', tone = 'default' }: { href?: string; tone?: 'default' | 'inverse' }) {
   return (
     <Link href={href} className={`${styles.logo} ${tone === 'inverse' ? styles.inverse : ''}`} aria-label="ParsePilot home">
-      <span className={styles.mark} aria-hidden="true">
-        <svg viewBox="0 0 246 198" fill="none" focusable="false" aria-hidden="true">
-          <path d="M0 0h158v53H0z" fill="currentColor" />
-          <path d="M173 0l73 53h-73z" fill="var(--color-accent)" />
-          <path d="M69 73h149.5a27.5 27.5 0 0 1 0 55H150L0 198z" fill="currentColor" />
-        </svg>
-      </span>
-      <span className={styles.word}>
-        Parse<span className={styles.wordAccent}>Pilot</span>
-      </span>
+      <img src="/mainlogo.png" alt="ParsePilot" width={2064} height={396} className={styles.mark} />
     </Link>
   );
 }
