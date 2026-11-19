@@ -9,13 +9,16 @@ import { optimizeImage, savedPercent } from '@/lib/client/image-tools';
 import { formatBytes } from '@/lib/format';
 import styles from './UploadPanel.module.css';
 
+type UploadStatus = 'queued' | 'uploading' | 'done' | 'error';
+
 type UploadState = {
   id: string;
+  /** File name, or the path inside a dropped/selected folder. */
   name: string;
   size: number;
   type: string;
   previewUrl: string | null;
-  status: 'uploading' | 'done' | 'error';
+  status: UploadStatus;
   progress: number;
   /** Size before the browser re-encoded the image to WebP. */
   optimizedFrom?: number | null;
@@ -24,8 +27,25 @@ type UploadState = {
   duplicateOf?: string | null;
 };
 
+type PickedFile = { file: File; path: string };
+type QueuedFile = { id: string; file: File };
+
 const ACCEPT = '.pdf,.png,.jpg,.jpeg,.tif,.tiff,.webp';
 const PREVIEWABLE = /^image\/(png|jpeg|webp)$/i;
+const SUPPORTED_EXTENSION = /\.(pdf|png|jpe?g|tiff?|webp)$/i;
+const SUPPORTED_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/tiff', 'image/webp']);
+
+/** Files queued from a single pick or drop; a larger folder is split by the user. */
+const MAX_BATCH = 200;
+/** Cards kept in the panel, so a long session does not grow without bound. */
+const MAX_SESSION = 300;
+/** Parallel uploads: enough to overlap network latency without hammering the API. */
+const CONCURRENCY = 3;
+/** Guards against pathological or deeply linked folder trees. */
+const MAX_FOLDER_DEPTH = 8;
+
+/** `webkitdirectory` is not part of React's input typings. */
+const directoryPickerProps = { webkitdirectory: '' } as unknown as React.InputHTMLAttributes<HTMLInputElement>;
 
 type UploadResponse = {
   data?: {
@@ -34,6 +54,73 @@ type UploadResponse = {
   };
   error?: { message?: string };
 };
+
+function isIgnoredPath(path: string): boolean {
+  // Hidden files and folders (.DS_Store, .git, __MACOSX-style caches) are noise.
+  return path.split('/').some((segment) => segment.startsWith('.'));
+}
+
+function isSupported(file: File, path: string): boolean {
+  return SUPPORTED_EXTENSION.test(path) || SUPPORTED_TYPES.has(file.type.toLowerCase());
+}
+
+/**
+ * `readEntries` hands back at most 100 entries per call and an empty array at
+ * the end, so a single call would silently miss files in a large folder.
+ */
+async function readAllDirectoryEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+  const found: FileSystemEntry[] = [];
+  for (;;) {
+    const batch = await new Promise<FileSystemEntry[]>((resolve) => {
+      reader.readEntries(
+        (entries) => resolve(entries),
+        () => resolve([]),
+      );
+    });
+    if (batch.length === 0) break;
+    found.push(...batch);
+    if (found.length >= 5000) break;
+  }
+  return found;
+}
+
+async function walkEntry(entry: FileSystemEntry, path: string, out: PickedFile[], depth = 0): Promise<void> {
+  if (depth > MAX_FOLDER_DEPTH) return;
+
+  if (entry.isFile) {
+    const file = await new Promise<File | null>((resolve) => {
+      (entry as FileSystemFileEntry).file(
+        (result) => resolve(result),
+        () => resolve(null),
+      );
+    });
+    if (file) out.push({ file, path });
+    return;
+  }
+
+  if (entry.isDirectory) {
+    const reader = (entry as FileSystemDirectoryEntry).createReader();
+    const children = await readAllDirectoryEntries(reader);
+    await Promise.all(children.map((child) => walkEntry(child, `${path}/${child.name}`, out, depth + 1)));
+  }
+}
+
+/** Flattens a drop of loose files, a folder, or several of each. */
+async function collectDroppedFiles(dataTransfer: DataTransfer): Promise<PickedFile[]> {
+  // webkitGetAsEntry must be read synchronously, before any await.
+  const rootEntries = Array.from(dataTransfer.items ?? [])
+    .filter((item) => item.kind === 'file')
+    .map((item) => (typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null))
+    .filter((entry): entry is FileSystemEntry => Boolean(entry));
+
+  if (rootEntries.length === 0) {
+    return Array.from(dataTransfer.files ?? []).map((file) => ({ file, path: file.name }));
+  }
+
+  const collected: PickedFile[] = [];
+  await Promise.all(rootEntries.map((entry) => walkEntry(entry, entry.name, collected)));
+  return collected;
+}
 
 export function UploadPanel({
   workspaceId,
@@ -46,12 +133,18 @@ export function UploadPanel({
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const folderRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
   const dragDepth = useRef(0);
   const objectUrls = useRef<string[]>([]);
+  const queueRef = useRef<QueuedFile[]>([]);
+  const activeRef = useRef(0);
+  const pumpRef = useRef<() => void>(() => {});
   const [dragging, setDragging] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [uploads, setUploads] = useState<UploadState[]>([]);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Object URLs are the only client-side copy of a preview; release them when
   // the panel goes away so a long session does not leak blobs.
@@ -109,13 +202,12 @@ export function UploadPanel({
               status: 'done',
               progress: 100,
               documentId: result?.document?.id,
-              message: result?.document ? 'Queued' : 'Uploaded',
               duplicateOf: result?.duplicateOf?.name ?? null,
             });
           } else {
             patchUpload(id, {
               status: 'error',
-              progress: 100,
+              progress: 0,
               message: payload?.error?.message ?? 'Not accepted. Check the file and try again.',
             });
           }
@@ -123,7 +215,7 @@ export function UploadPanel({
         };
 
         xhr.onerror = () => {
-          patchUpload(id, { status: 'error', progress: 100, message: 'Connection dropped. Try that file again.' });
+          patchUpload(id, { status: 'error', progress: 0, message: 'Connection dropped. Try that file again.' });
           resolve();
         };
 
@@ -133,68 +225,145 @@ export function UploadPanel({
     [patchUpload, workspaceId],
   );
 
-  const uploadFiles = useCallback(
-    async (files: File[]) => {
-      if (files.length === 0 || busyRef.current) return;
-      busyRef.current = true;
-      setBusy(true);
+  /**
+   * Drains the queue, keeping CONCURRENCY requests in flight. Each finished
+   * file starts the next one; when the queue and the pool are both empty the
+   * batch is complete and the server components refresh once.
+   */
+  const startQueuedUploads = useCallback(() => {
+    while (activeRef.current < CONCURRENCY) {
+      const next = queueRef.current.shift();
+      if (!next) break;
+      activeRef.current += 1;
+      patchUpload(next.id, { status: 'uploading', progress: 2 });
 
+      void (async () => {
+        try {
+          // Shrink images in the browser: a phone photo becomes a fraction of
+          // its size before it ever touches the network or our storage.
+          const prepared = await optimizeImage(next.file, { maxDimension: 2200, quality: 0.82 });
+          if (prepared.changed) {
+            patchUpload(next.id, {
+              size: prepared.optimizedBytes,
+              optimizedFrom: prepared.originalBytes,
+              type: 'image/webp',
+            });
+          }
+          await uploadFile(prepared.file, next.id);
+        } catch {
+          patchUpload(next.id, { status: 'error', progress: 0, message: 'Could not prepare this file. Try again.' });
+        } finally {
+          activeRef.current -= 1;
+          if (queueRef.current.length === 0 && activeRef.current === 0 && busyRef.current) {
+            busyRef.current = false;
+            setBusy(false);
+            router.refresh();
+          }
+          pumpRef.current();
+        }
+      })();
+    }
+  }, [patchUpload, router, uploadFile]);
+
+  useEffect(() => {
+    pumpRef.current = startQueuedUploads;
+  }, [startQueuedUploads]);
+
+  const enqueue = useCallback(
+    (picked: PickedFile[]) => {
       const limitBytes = maxUploadMb * 1024 * 1024;
-      const selected = files.slice(0, 8);
+      const supported: PickedFile[] = [];
+      let ignored = 0;
 
-      const initial: UploadState[] = selected.map((file, index) => {
-        const tooLarge = file.size > limitBytes;
-        let previewUrl: string | null = null;
-        if (PREVIEWABLE.test(file.type) && !tooLarge) {
-          previewUrl = URL.createObjectURL(file);
-          objectUrls.current.push(previewUrl);
+      for (const item of picked) {
+        if (isIgnoredPath(item.path)) continue;
+        if (!isSupported(item.file, item.path)) {
+          ignored += 1;
+          continue;
         }
-        return {
-          id: `${Date.now()}-${index}-${file.name}`,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          previewUrl,
-          status: tooLarge ? 'error' : 'uploading',
-          progress: tooLarge ? 100 : 0,
-          message: tooLarge ? `Larger than the ${maxUploadMb} MB limit on this plan` : undefined,
-        };
-      });
-
-      setUploads((current) => [...initial, ...current].slice(0, 8));
-
-      for (const [index, file] of selected.entries()) {
-        if (initial[index].status === 'error') continue;
-        const id = initial[index].id;
-
-        // Shrink images in the browser: a phone photo becomes a fraction of
-        // its size before it ever touches the network or our storage.
-        const prepared = await optimizeImage(file, { maxDimension: 2200, quality: 0.82 });
-        if (prepared.changed) {
-          patchUpload(id, {
-            size: prepared.optimizedBytes,
-            optimizedFrom: prepared.originalBytes,
-            type: 'image/webp',
-          });
-        }
-
-        await uploadFile(prepared.file, id);
+        supported.push(item);
       }
 
-      busyRef.current = false;
-      setBusy(false);
-      router.refresh();
+      const selected = supported.slice(0, MAX_BATCH);
+      const overflow = supported.length - selected.length;
+      const stamp = Date.now();
+      const initial: UploadState[] = [];
+      const queued: QueuedFile[] = [];
+
+      selected.forEach((item, index) => {
+        const id = `${stamp}-${index}-${item.path}`;
+        const tooLarge = item.file.size > limitBytes;
+        let previewUrl: string | null = null;
+        if (PREVIEWABLE.test(item.file.type) && !tooLarge) {
+          previewUrl = URL.createObjectURL(item.file);
+          objectUrls.current.push(previewUrl);
+        }
+        initial.push({
+          id,
+          name: item.path,
+          size: item.file.size,
+          type: item.file.type,
+          previewUrl,
+          status: tooLarge ? 'error' : 'queued',
+          progress: 0,
+          message: tooLarge ? `Larger than the ${maxUploadMb} MB limit on this plan` : undefined,
+        });
+        if (!tooLarge) queued.push({ id, file: item.file });
+      });
+
+      const notes: string[] = [];
+      if (ignored > 0) {
+        notes.push(`${ignored} unsupported file${ignored === 1 ? '' : 's'} skipped (PDF, PNG, JPEG, TIFF or WebP only).`);
+      }
+      if (overflow > 0) {
+        notes.push(
+          `${overflow} more file${overflow === 1 ? '' : 's'} not queued; a batch holds up to ${MAX_BATCH}. Drop the rest as a second batch.`,
+        );
+      }
+      setNotice(notes.length > 0 ? notes.join(' ') : null);
+
+      if (initial.length === 0) return;
+      setUploads((current) => [...initial, ...current].slice(0, MAX_SESSION));
+
+      if (queued.length > 0) {
+        busyRef.current = true;
+        setBusy(true);
+        queueRef.current.push(...queued);
+        pumpRef.current();
+      }
     },
-    [maxUploadMb, patchUpload, router, uploadFile],
+    [maxUploadMb],
   );
 
-  const onDrop = (event: React.DragEvent) => {
+  const onPick = useCallback(
+    (fileList: FileList | null) => {
+      const files = Array.from(fileList ?? []);
+      enqueue(files.map((file) => ({ file, path: file.webkitRelativePath || file.name })));
+    },
+    [enqueue],
+  );
+
+  const onDrop = async (event: React.DragEvent) => {
     event.preventDefault();
     dragDepth.current = 0;
     setDragging(false);
-    if (busy) return;
-    void uploadFiles(Array.from(event.dataTransfer.files ?? []));
+    setScanning(true);
+    try {
+      enqueue(await collectDroppedFiles(event.dataTransfer));
+    } finally {
+      setScanning(false);
+    }
   };
+
+  const uploaded = uploads.filter((entry) => entry.status === 'done').length;
+  const rejected = uploads.filter((entry) => entry.status === 'error').length;
+  const waiting = uploads.filter((entry) => entry.status === 'queued' || entry.status === 'uploading').length;
+  const batchProgress =
+    uploads.length === 0
+      ? 0
+      : Math.round(
+          uploads.reduce((sum, entry) => sum + (entry.status === 'error' ? 0 : entry.progress), 0) / uploads.length,
+        );
 
   return (
     <div className={`${styles.wrap} ${compact ? styles.compact : ''}`}>
@@ -202,7 +371,6 @@ export function UploadPanel({
         className={`${styles.zone} ${dragging ? styles.dropping : ''} ${busy ? styles.busyZone : ''}`}
         onDragEnter={(event) => {
           event.preventDefault();
-          if (busy) return;
           dragDepth.current += 1;
           setDragging(true);
         }}
@@ -221,14 +389,21 @@ export function UploadPanel({
           <ImageIcon size={16} />
         </span>
         <div className={styles.copy}>
-          <p className={styles.title}>{dragging ? 'Drop to upload' : 'Drop documents here'}</p>
+          <p className={styles.title}>{dragging ? 'Drop to upload' : 'Drop documents or a folder here'}</p>
           <p className={styles.hint}>
-            PDF, PNG, JPEG, TIFF or WebP · up to {maxUploadMb} MB each
+            {scanning
+              ? 'Reading folder…'
+              : `PDF, PNG, JPEG, TIFF or WebP · up to ${maxUploadMb} MB each · folders and batches welcome`}
           </p>
         </div>
-        <button type="button" className={styles.choose} onClick={() => inputRef.current?.click()} disabled={busy}>
-          {busy ? 'Uploading…' : 'Browse'}
-        </button>
+        <div className={styles.actions}>
+          <button type="button" className={styles.choose} onClick={() => inputRef.current?.click()} disabled={scanning}>
+            {busy ? 'Add files' : 'Browse'}
+          </button>
+          <button type="button" className={styles.choose} onClick={() => folderRef.current?.click()} disabled={scanning}>
+            Folder
+          </button>
+        </div>
         <input
           ref={inputRef}
           type="file"
@@ -236,8 +411,19 @@ export function UploadPanel({
           multiple
           className={styles.input}
           onChange={(event) => {
-            const files = Array.from(event.target.files ?? []);
-            void uploadFiles(files);
+            onPick(event.target.files);
+            event.target.value = '';
+          }}
+        />
+        <input
+          ref={folderRef}
+          type="file"
+          accept={ACCEPT}
+          multiple
+          className={styles.input}
+          {...directoryPickerProps}
+          onChange={(event) => {
+            onPick(event.target.files);
             event.target.value = '';
           }}
         />
@@ -246,12 +432,25 @@ export function UploadPanel({
       {uploads.length > 0 ? (
         <div className={styles.uploads} aria-live="polite">
           <div className={styles.listHead}>
-            <span>This session</span>
+            <span>{busy ? 'Uploading batch' : 'This session'}</span>
             <span>
-              {uploads.filter((entry) => entry.status === 'done').length} queued ·{' '}
-              {uploads.filter((entry) => entry.status === 'error').length} rejected
+              {uploaded} uploaded · {rejected} rejected
+              {waiting > 0 ? ` · ${waiting} waiting` : ''}
             </span>
           </div>
+          {busy ? (
+            <div
+              className={styles.batchTrack}
+              role="progressbar"
+              aria-label="Batch upload progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={batchProgress}
+            >
+              <span className={styles.batchFill} style={{ width: `${batchProgress}%` }} />
+            </div>
+          ) : null}
+          {notice ? <p className={styles.notice}>{notice}</p> : null}
           <ul className={styles.grid}>
             {uploads.map((entry, index) => (
               <li
@@ -259,7 +458,7 @@ export function UploadPanel({
                 className={`${styles.card} ${entry.status === 'error' ? styles.cardError : ''} ${
                   entry.status === 'done' ? styles.cardDone : ''
                 }`}
-                style={{ '--i': index } as React.CSSProperties}
+                style={{ '--i': Math.min(index, 12) } as React.CSSProperties}
               >
                 <a
                   className={styles.thumb}
@@ -298,8 +497,10 @@ export function UploadPanel({
                       {entry.status === 'uploading'
                         ? `${entry.progress}%`
                         : entry.status === 'done'
-                          ? 'Queued'
-                          : 'Rejected'}
+                          ? 'Uploaded'
+                          : entry.status === 'queued'
+                            ? 'Waiting'
+                            : 'Rejected'}
                     </span>
                   </p>
                   <div className={styles.track} aria-hidden="true">

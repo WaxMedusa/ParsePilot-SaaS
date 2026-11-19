@@ -74,6 +74,9 @@ export const POST = withApi(
   },
   {
     workspace: { minRole: 'member' },
-    rateLimit: { limit: 30, windowMs: 60 * 60 * 1000, per: 'user' },
+    // Batch uploads are many requests by design: a folder of invoices can hold
+    // hundreds of files. The per-plan page quota and file-size limits remain
+    // the real ceiling on volume; this only stops a runaway client loop.
+    rateLimit: { limit: 600, windowMs: 60 * 60 * 1000, per: 'user' },
   },
 );
