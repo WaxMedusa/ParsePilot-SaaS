@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Inbox, Info } from 'lucide-react';
 import { requireWorkspaceAuth } from '@/lib/auth/server';
 import { listDocuments } from '@/lib/documents/repository';
 import { PageHeader } from '@/components/dashboard/PageHeader';
@@ -53,7 +54,7 @@ export default async function ReviewQueuePage({
         {documents.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon} aria-hidden="true">
-              —
+              <Inbox size={14} strokeWidth={1.6} />
             </span>
             <p className={styles.emptyTitle}>Review queue is clear</p>
             <p className={styles.emptyBody}>
@@ -85,8 +86,9 @@ export default async function ReviewQueuePage({
       </section>
 
       <div className={`${styles.notice} ${styles.noticeInfo}`} role="note">
+        <Info size={14} strokeWidth={1.7} className={styles.noticeIcon} aria-hidden="true" />
         <div>
-          <strong>Why documents land here.</strong>
+          <strong className={styles.noticeTitle}>Why documents land here.</strong>
           <p className={styles.noticeBody}>
             The pipeline routes a document to review when required fields are missing, totals do not reconcile, a
             duplicate is suspected, or confidence is low. Mark reviewed only after checking the extracted values.
