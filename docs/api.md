@@ -57,7 +57,7 @@ idempotent while an active job exists.
 | Auth | `POST /auth/signup`, `/auth/login`, `/auth/logout`; `GET /auth/session`; `POST /auth/password-reset/request`, `/confirm` |
 | Documents | `GET/POST /documents`; `GET/PATCH/DELETE /documents/:id`; `POST /documents/:id/process`, `/retry`, `/download-url`; `GET /documents/:id/status`; `PATCH /documents/:id/fields/:fieldId` |
 | Jobs | `GET /jobs`, `GET /jobs/:id` |
-| Exports | `GET/POST /exports`; `GET /exports/:id/download` |
+| Exports | `GET/POST /exports`; `GET /exports/:id/download`; `GET /exports/live` (session download); `GET /exports/live/:token` (permanent signed link, no session, rebuilt from current data on every request) |
 | Billing | `GET /subscription`, `POST /subscription/checkout`, `POST /subscription/portal`, `GET /usage` |
 | Privacy | `GET /privacy/account`, `POST /privacy/requests`, `GET /privacy/requests[/:id/download]`, `DELETE /privacy/sessions/:id`, `POST /privacy/account-deletion`, `/cancel`, `/workspace-deletion`, `POST /privacy/consent` |
 | System | `GET /openapi`; `/health` and `/ready` live at the app root |

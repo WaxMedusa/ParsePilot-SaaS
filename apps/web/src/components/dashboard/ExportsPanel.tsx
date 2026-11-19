@@ -25,14 +25,17 @@ export function ExportsPanel({
   workspaceId,
   canCreate,
   xlsxAllowed,
+  liveUrl,
 }: {
   initialExports: ExportRow[];
   workspaceId: string;
   canCreate: boolean;
   xlsxAllowed: boolean;
+  liveUrl: string;
 }) {
   const [exports, setExports] = useState<ExportRow[]>(initialExports);
   const [busy, setBusy] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollTimer = useRef<number | undefined>(undefined);
 
@@ -105,7 +108,7 @@ export function ExportsPanel({
         cache: 'no-store',
       });
       if (!response.ok) {
-        let message = 'The live workbook could not be built.';
+        let message = 'The workbook could not be built.';
         try {
           const payload = (await response.json()) as { error?: { message?: string } };
           message = payload.error?.message ?? message;
@@ -133,35 +136,69 @@ export function ExportsPanel({
     }
   };
 
+  const copyLiveLink = async () => {
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(liveUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1_800);
+    } catch {
+      setError('The link could not be copied. Select the field and copy it manually.');
+    }
+  };
+
   return (
     <div className={styles.page}>
       <section className={styles.card}>
         <div className={styles.cardHead}>
-          <span className={styles.cardTitle}>Live XLSX</span>
-          <span className={styles.cardHint}>always current · no expiry</span>
+          <span className={styles.cardTitle}>Live workbook</span>
+          <span className={styles.cardHint}>permanent link · rebuilt on every open</span>
         </div>
         <div className={styles.cardBody}>
           <p className={styles.sectionBody}>
-            One workbook, built from every completed and needs-review document at the moment you download it. New
-            uploads, processing results and field corrections are included automatically — there is no stale snapshot
-            to regenerate.
+            This link returns the workbook built from the workspace as it is right now, every time it is requested.
+            Connect it once in Excel with <strong>Data → Get Data → From Other Sources → From Web</strong>, then use
+            <strong> Refresh All</strong> whenever you want the latest uploads, processing results and field
+            corrections. A file you download is a snapshot of the moment you clicked; the link never goes stale.
+            Google Sheets only imports files, so it needs the downloaded snapshot rather than this link.
           </p>
-          <div className={styles.actions} style={{ marginTop: 14 }}>
+          <div className={styles.formRow} style={{ marginTop: 14 }}>
+            <label className={styles.label} htmlFor="live-workbook-url">
+              Live link
+            </label>
+            <input
+              id="live-workbook-url"
+              className={styles.input}
+              readOnly
+              value={xlsxAllowed ? liveUrl : 'XLSX exports are included on Starter and above.'}
+              onFocus={(event) => event.currentTarget.select()}
+            />
+          </div>
+          <div className={styles.actions}>
             <Button
               variant="secondary"
               icon={<FileSpreadsheet />}
+              onClick={copyLiveLink}
+              disabled={!xlsxAllowed || busy !== null}
+              title={xlsxAllowed ? undefined : 'XLSX exports are included on Starter and above.'}
+            >
+              {copied ? 'Copied' : 'Copy live link'}
+            </Button>
+            <Button
+              variant="secondary"
+              icon={<Download />}
               onClick={downloadLive}
               disabled={busy !== null || !xlsxAllowed}
               title={xlsxAllowed ? undefined : 'XLSX exports are included on Starter and above.'}
             >
-              {busy === 'live' ? 'Building workbook…' : 'Download live XLSX'}
+              {busy === 'live' ? 'Building workbook…' : 'Download snapshot'}
             </Button>
-            <span className={styles.hint}>
-              {xlsxAllowed
-                ? 'Updates with the workspace · includes edited values'
-                : 'XLSX is included on Starter and above · CSV is available on every plan'}
-            </span>
           </div>
+          <p className={styles.hint} style={{ marginTop: 10 }}>
+            {xlsxAllowed
+              ? 'The link is a private key for this workspace: anyone who has it can download this data. Rotating DOWNLOAD_SIGNING_SECRET revokes every link.'
+              : 'XLSX is included on Starter and above · CSV is available on every plan'}
+          </p>
         </div>
       </section>
 
@@ -215,7 +252,7 @@ export function ExportsPanel({
             <p className={styles.emptyTitle}>No exports yet</p>
             <p className={styles.emptyBody}>
               {xlsxAllowed
-                ? 'Download the live XLSX above for the current data, or create a CSV snapshot with the full field set, including corrections.'
+                ? 'Use the live workbook link above for current data, or create a CSV snapshot with the full field set, including corrections.'
                 : 'Create a CSV snapshot with the full field set, including corrections. XLSX exports are included on Starter and above.'}
             </p>
           </div>
