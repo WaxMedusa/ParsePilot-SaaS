@@ -54,7 +54,7 @@ export class S3Storage implements StorageProvider {
           ChecksumSHA256: options.checksumSha256
             ? Buffer.from(options.checksumSha256, 'hex').toString('base64')
             : undefined,
-          ServerSideEncryption: 'AES256',
+          ServerSideEncryption: appConfig.s3.serverSideEncryption,
         }),
       );
     } catch (error) {
@@ -105,7 +105,12 @@ export class S3Storage implements StorageProvider {
   async createUploadUrl(key: string, contentType: string, expiresInSeconds: number): Promise<string> {
     return getSignedUrl(
       this.s3(),
-      new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType, ServerSideEncryption: 'AES256' }),
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ContentType: contentType,
+        ServerSideEncryption: appConfig.s3.serverSideEncryption,
+      }),
       { expiresIn: Math.max(30, Math.min(expiresInSeconds, 3600)) },
     );
   }

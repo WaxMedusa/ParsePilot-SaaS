@@ -138,7 +138,7 @@ export async function findChecksumDuplicate(workspaceId: string, checksumSha256:
       deletedAt: null,
       ...(excludeDocumentId ? { id: { not: excludeDocumentId } } : {}),
     },
-    select: { id: true, originalName: true, createdAt: true },
+    select: { id: true, originalName: true, createdAt: true, storageKey: true },
   });
 }
 

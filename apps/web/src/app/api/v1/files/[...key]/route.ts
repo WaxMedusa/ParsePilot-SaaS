@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { verifyFilePayload } from '@/lib/storage/signing';
 import { getStorage } from '@/lib/storage';
+import { getStorageForKey } from '@/lib/storage/references';
 import { logger } from '@/lib/logger';
 import { appConfig } from '@/lib/env';
 
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ key
   }
 
   try {
-    const bytes = await getStorage().getObject(key);
+    const bytes = await (await getStorageForKey(key)).getObject(key);
     const contentType = contentTypeFor(key, payload.mime);
     const body = new Uint8Array(bytes);
     return new NextResponse(body, {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Camera, Check, Trash2, X } from 'lucide-react';
 import { apiRequest, errorMessage } from '@/lib/client/api';
 import { ensureCsrfToken } from '@/lib/client/csrf';
+import { optimizeImage } from '@/lib/client/image-tools';
 import { MAX_AVATAR_MB, MAX_AVATAR_BYTES } from '@/lib/profile/avatar';
 import styles from './ProfileSettings.module.css';
 
@@ -46,8 +47,9 @@ export function ProfileSettings({ name, email, initials, avatarUrl: serverAvatar
 
   const upload = async (file: File) => {
     setAvatarError(null);
-    if (file.size > MAX_AVATAR_BYTES) {
-      setAvatarError(`That image is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is ${MAX_AVATAR_MB} MB.`);
+    const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
+    if (file.size > MAX_SOURCE_BYTES) {
+      setAvatarError(`That image is ${(file.size / 1024 / 1024).toFixed(1)} MB. Pick one under 12 MB.`);
       return;
     }
     if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) {
@@ -55,14 +57,22 @@ export function ProfileSettings({ name, email, initials, avatarUrl: serverAvatar
       return;
     }
 
+    // A portrait only needs 512px. Re-encoding to WebP turns a multi-megabyte
+    // photo into a few tens of kilobytes before it is uploaded.
+    const prepared = await optimizeImage(file, { maxDimension: 512, quality: 0.9, skipUnderBytes: 48 * 1024 });
+    if (prepared.file.size > MAX_AVATAR_BYTES) {
+      setAvatarError(`That image is still ${(prepared.file.size / 1024 / 1024).toFixed(1)} MB after resizing. The limit is ${MAX_AVATAR_MB} MB.`);
+      return;
+    }
+
     clearPreview();
-    const localUrl = URL.createObjectURL(file);
+    const localUrl = URL.createObjectURL(prepared.file);
     objectUrl.current = localUrl;
     setPreview(localUrl);
 
     const csrf = await ensureCsrfToken();
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', prepared.file);
 
     setUploading(true);
     setProgress(0);
@@ -174,7 +184,9 @@ export function ProfileSettings({ name, email, initials, avatarUrl: serverAvatar
           </div>
 
           <div className={styles.avatarCopy}>
-            <p className={styles.avatarLead}>Square images look best. PNG, JPEG or WebP.</p>
+            <p className={styles.avatarLead}>
+              Square images look best. PNG, JPEG or WebP, resized to 512px WebP before it is uploaded.
+            </p>
             <div className={styles.avatarActions}>
               <button type="button" className={styles.secondary} onClick={() => inputRef.current?.click()} disabled={uploading}>
                 <Camera size={13} /> {shown ? 'Replace' : 'Upload'}

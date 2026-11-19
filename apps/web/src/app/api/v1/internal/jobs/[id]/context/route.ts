@@ -2,7 +2,7 @@ import { withInternalService } from '@/lib/http/handler';
 import { ok } from '@/lib/http/respond';
 import { ApiError } from '@/lib/http/errors';
 import { prisma } from '@/lib/prisma';
-import { getStorage } from '@/lib/storage';
+import { getStorageForKey } from '@/lib/storage/references';
 import { jobSummary } from '@/lib/jobs/service';
 import { appConfig } from '@/lib/env';
 import { resolveAiConfig } from '@/lib/ai/settings';
@@ -33,7 +33,8 @@ export const GET = withInternalService(async (request, context) => {
 
   let documentContext: Record<string, unknown> | null = null;
   if (job.document) {
-    const url = await getStorage().createDownloadUrl(
+    const storage = await getStorageForKey(job.document.storageKey);
+    const url = await storage.createDownloadUrl(
       job.document.storageKey,
       900,
       job.document.originalName,

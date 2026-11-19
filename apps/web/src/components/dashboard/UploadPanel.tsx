@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FileText, Image as ImageIcon, X } from 'lucide-react';
 import { ensureCsrfToken } from '@/lib/client/csrf';
+import { optimizeImage, savedPercent } from '@/lib/client/image-tools';
 import { formatBytes } from '@/lib/format';
 import styles from './UploadPanel.module.css';
 
@@ -16,6 +17,8 @@ type UploadState = {
   previewUrl: string | null;
   status: 'uploading' | 'done' | 'error';
   progress: number;
+  /** Size before the browser re-encoded the image to WebP. */
+  optimizedFrom?: number | null;
   message?: string;
   documentId?: string;
   duplicateOf?: string | null;
@@ -162,14 +165,27 @@ export function UploadPanel({
 
       for (const [index, file] of selected.entries()) {
         if (initial[index].status === 'error') continue;
-        await uploadFile(file, initial[index].id);
+        const id = initial[index].id;
+
+        // Shrink images in the browser: a phone photo becomes a fraction of
+        // its size before it ever touches the network or our storage.
+        const prepared = await optimizeImage(file, { maxDimension: 2200, quality: 0.82 });
+        if (prepared.changed) {
+          patchUpload(id, {
+            size: prepared.optimizedBytes,
+            optimizedFrom: prepared.originalBytes,
+            type: 'image/webp',
+          });
+        }
+
+        await uploadFile(prepared.file, id);
       }
 
       busyRef.current = false;
       setBusy(false);
       router.refresh();
     },
-    [maxUploadMb, router, uploadFile],
+    [maxUploadMb, patchUpload, router, uploadFile],
   );
 
   const onDrop = (event: React.DragEvent) => {
@@ -269,6 +285,11 @@ export function UploadPanel({
                   </p>
                   <p className={styles.cardMeta}>
                     <span>{formatBytes(entry.size)}</span>
+                    {entry.optimizedFrom ? (
+                      <span className={styles.savings} title={`Was ${formatBytes(entry.optimizedFrom)}`}>
+                        −{savedPercent(entry.optimizedFrom, entry.size)}%
+                      </span>
+                    ) : null}
                     <span
                       className={`${styles.state} ${entry.status === 'done' ? styles.stateDone : ''} ${
                         entry.status === 'error' ? styles.stateError : ''

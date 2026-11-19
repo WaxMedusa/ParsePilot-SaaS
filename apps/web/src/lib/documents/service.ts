@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { prisma } from '../prisma';
 import { ApiError } from '../http/errors';
 import { appConfig } from '../env';
-import { getStorage, generateStorageKey, StorageError } from '../storage';
+import { getStorage, generateStorageKey, StorageError, type StorageProvider } from '../storage';
+import { deleteObjectIfUnreferenced, getStorageForKey } from '../storage/references';
 import { validateUploadFile } from './validation';
 import { assertCanProcess, assertUploadSizeAllowed } from '../billing/usage';
 import { createJob } from '../jobs/service';
@@ -23,6 +24,83 @@ import { resolveFieldValue } from './fields';
  * re-checks authorization at the API layer; storage objects are only ever
  * reachable through short-lived signed URLs minted here.
  */
+
+/**
+ * Chooses where a new document's bytes go. A connected Google Drive takes
+ * them (the user's own quota); otherwise the deployment's storage does.
+ */
+async function resolveUploadTarget(userId: string, workspaceId: string, extension: string) {
+  // The table may not exist on a deployment that has not migrated yet; that is
+  // not a reason to reject an upload.
+  const connection = await Promise.resolve()
+    .then(() => prisma.storageConnection.findUnique({ where: { userId }, select: { id: true } }))
+    .catch(() => null);
+
+  if (connection) {
+    const [{ GoogleDriveStorage, driveStorageKey }, { reserveDriveFileId }] = await Promise.all([
+      import('../storage/google-drive'),
+      import('../integrations/google-drive'),
+    ]);
+    const fileId = await reserveDriveFileId(userId).catch(() => null);
+    if (fileId) {
+      return {
+        storage: new GoogleDriveStorage(userId) as StorageProvider,
+        storageKey: driveStorageKey(userId, fileId, extension),
+      };
+    }
+    logger.warn('drive_id_reservation_failed', { userId });
+  }
+
+  return { storage: getStorage(), storageKey: generateStorageKey(workspaceId, extension) };
+}
+
+/** Writes the accepted bytes, falling back to deployment storage if Drive fails. */
+async function storeUpload(input: {
+  userId: string;
+  workspaceId: string;
+  extension: string;
+  bytes: Uint8Array;
+  mime: string;
+  checksumSha256: string;
+}): Promise<{ storageKey: string; driver: StorageProvider['driver'] }> {
+  const target = await resolveUploadTarget(input.userId, input.workspaceId, input.extension);
+
+  try {
+    await target.storage.putObject(target.storageKey, input.bytes, {
+      contentType: input.mime,
+      checksumSha256: input.checksumSha256,
+    });
+    return { storageKey: target.storageKey, driver: target.storage.driver };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown';
+
+    if (target.storage.driver !== 'google-drive') {
+      await increment('upload_storage_failures');
+      logger.error('upload_storage_failed', { workspaceId: input.workspaceId, message });
+      throw ApiError.unavailable('The document could not be stored. Please try again.');
+    }
+
+    // Revoked access, a full Drive or a transient Google error must not lose
+    // the user's upload: it lands in the deployment's storage instead.
+    logger.warn('drive_upload_failed_falling_back', { workspaceId: input.workspaceId, message });
+    await prisma.storageConnection
+      .updateMany({ where: { userId: input.userId }, data: { lastError: message.slice(0, 300) } })
+      .catch(() => undefined);
+
+    const storage = getStorage();
+    const storageKey = generateStorageKey(input.workspaceId, input.extension);
+    try {
+      await storage.putObject(storageKey, input.bytes, {
+        contentType: input.mime,
+        checksumSha256: input.checksumSha256,
+      });
+    } catch {
+      await increment('upload_storage_failures');
+      throw ApiError.unavailable('The document could not be stored. Please try again.');
+    }
+    return { storageKey, driver: storage.driver };
+  }
+}
 
 export async function createDocumentFromUpload(input: {
   workspaceId: string;
@@ -49,34 +127,40 @@ export async function createDocumentFromUpload(input: {
   // Quota and subscription checks happen before any object is written.
   await assertCanProcess(input.workspaceId, validated.pageCount);
 
-  const storage = getStorage();
-  const storageKey = generateStorageKey(input.workspaceId, validated.extension);
+  // A byte-identical document in this workspace already owns those bytes.
+  // Reuse its object instead of storing the same file twice.
+  const duplicate = await findChecksumDuplicate(input.workspaceId, validated.checksumSha256);
 
-  try {
-    await storage.putObject(storageKey, validated.bytes, {
-      contentType: validated.mime,
+  let storageKey: string;
+  let storedDriver: StorageProvider['driver'] | null = null;
+  if (duplicate?.storageKey) {
+    storageKey = duplicate.storageKey;
+    await increment('uploads_deduplicated');
+  } else {
+    const stored = await storeUpload({
+      userId: input.userId,
+      workspaceId: input.workspaceId,
+      extension: validated.extension,
+      bytes: validated.bytes,
+      mime: validated.mime,
       checksumSha256: validated.checksumSha256,
     });
-  } catch (error) {
-    await increment('upload_storage_failures');
-    logger.error('upload_storage_failed', { workspaceId: input.workspaceId, message: error instanceof Error ? error.message : 'unknown' });
-    throw ApiError.unavailable('The document could not be stored. Please try again.');
+    storageKey = stored.storageKey;
+    storedDriver = stored.driver;
   }
 
   // Integrity verification: the stored bytes must match the accepted upload.
-  if (storage.driver === 'local') {
-    const readBack = await storage.getObject(storageKey);
+  if (storedDriver === 'local') {
+    const readBack = await getStorage().getObject(storageKey);
     const digest = createHash('sha256').update(readBack).digest('hex');
     if (digest !== validated.checksumSha256) {
-      await storage.deleteObject(storageKey).catch(() => undefined);
+      await getStorage().deleteObject(storageKey).catch(() => undefined);
       throw ApiError.internal('Stored file failed its integrity check');
     }
   }
 
   let createdDocumentId: string | null = null;
   try {
-    const duplicate = await findChecksumDuplicate(input.workspaceId, validated.checksumSha256);
-
     const document = await prisma.document.create({
       data: {
         workspaceId: input.workspaceId,
@@ -95,6 +179,7 @@ export async function createDocumentFromUpload(input: {
         metadata: {
           declaredMime: input.file.type || null,
           quarantined: false,
+          deduplicated: Boolean(duplicate),
         } as Prisma.InputJsonValue,
       },
     });
@@ -127,7 +212,9 @@ export async function createDocumentFromUpload(input: {
     return { document, job, duplicate: duplicate ?? null };
   } catch (error) {
     // Never leave an orphaned object if the database write fails.
-    await getStorage().deleteObject(storageKey).catch(() => undefined);
+    if (!duplicate) {
+      await (await getStorageForKey(storageKey)).deleteObject(storageKey).catch(() => undefined);
+    }
     if (createdDocumentId) {
       await prisma.document.delete({ where: { id: createdDocumentId } }).catch(() => undefined);
     }
@@ -305,9 +392,11 @@ export async function purgeDocument(documentId: string): Promise<{ storageDelete
   if (!document) return { storageDeleted: false };
 
   let storageDeleted = false;
+  let shared = false;
   try {
-    await getStorage().deleteObject(document.storageKey);
-    storageDeleted = true;
+    const result = await deleteObjectIfUnreferenced(document.storageKey, { excludingDocumentId: documentId });
+    storageDeleted = result.deleted;
+    shared = result.shared;
   } catch (error) {
     if (error instanceof StorageError) {
       logger.warn('document_object_delete_failed', { documentId, message: error.message });
@@ -322,9 +411,9 @@ export async function purgeDocument(documentId: string): Promise<{ storageDelete
         target: 'document',
         targetId: document.id,
         storageKey: document.storageKey,
-        status: storageDeleted ? 'completed' : 'failed',
-        completedAt: storageDeleted ? new Date() : null,
-        lastError: storageDeleted ? null : 'object_delete_failed',
+        status: storageDeleted || shared ? 'completed' : 'failed',
+        completedAt: storageDeleted || shared ? new Date() : null,
+        lastError: storageDeleted || shared ? null : 'object_delete_failed',
       },
     }),
     prisma.document.delete({ where: { id: document.id } }),
@@ -350,7 +439,8 @@ export async function createDocumentDownloadUrl(input: {
     select: { id: true, storageKey: true, originalName: true, mimeType: true },
   });
   if (!document) throw ApiError.notFound('Document not found');
-  const url = await getStorage().createDownloadUrl(
+  const storage = await getStorageForKey(document.storageKey);
+  const url = await storage.createDownloadUrl(
     document.storageKey,
     retentionConfig.signedUrlSeconds,
     document.originalName,
@@ -368,7 +458,8 @@ export async function createDocumentDownloadUrl(input: {
 
 /** Returns the raw object for the signed file route. */
 export async function readStoredObject(storageKey: string) {
-  return getStorage().getObject(storageKey);
+  const storage = await getStorageForKey(storageKey);
+  return storage.getObject(storageKey);
 }
 
 /** Authorized bytes for the authenticated in-app document preview. */

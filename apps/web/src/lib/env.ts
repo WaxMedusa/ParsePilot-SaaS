@@ -87,6 +87,20 @@ export const appConfig = {
     accessKeyId: optionalEnv('S3_ACCESS_KEY_ID'),
     secretAccessKey: optionalEnv('S3_SECRET_ACCESS_KEY'),
     forcePathStyle: boolEnv('S3_FORCE_PATH_STYLE', true),
+    // SSE-S3 (x-amz-server-side-encryption: AES256) is an AWS-native header.
+    // Cloudflare R2 and Backblaze B2 encrypt at rest by default and reject it,
+    // so the header is opt-in rather than the default.
+    serverSideEncryption: (optionalEnv('S3_SERVER_SIDE_ENCRYPTION') === 'AES256' ? 'AES256' : undefined) as
+      | 'AES256'
+      | undefined,
+  },
+  googleDrive: {
+    // Optional. Without both values the Google Drive connection stays hidden
+    // and every document keeps using the deployment's own storage.
+    clientId: optionalEnv('GOOGLE_OAUTH_CLIENT_ID'),
+    clientSecret: optionalEnv('GOOGLE_OAUTH_CLIENT_SECRET'),
+    folderName: optionalEnv('GOOGLE_DRIVE_FOLDER_NAME', 'ParsePilot'),
+    redirectUri: optionalEnv('GOOGLE_OAUTH_REDIRECT_URI', `${appUrl}/api/v1/integrations/google-drive/callback`),
   },
   supabaseStorage: {
     url: optionalEnv('SUPABASE_URL', optionalEnv('NEXT_PUBLIC_SUPABASE_URL')),

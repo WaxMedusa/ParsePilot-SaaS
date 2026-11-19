@@ -5,6 +5,7 @@ import { logger } from '../logger';
 import { recordAudit } from '../audit';
 import { increment, observe } from '../observability/metrics';
 import { purgeDocument } from '../documents/service';
+import { deleteObjectIfUnreferenced } from '../storage/references';
 import { expireStaleExports } from '../exports/service';
 
 /**
@@ -32,8 +33,9 @@ export type RetentionSummary = {
 
 async function safeDeleteObject(storageKey: string): Promise<boolean> {
   try {
-    await getStorage().deleteObject(storageKey);
-    return true;
+    // Shared objects (checksum dedupe) stay until the last document lets go.
+    const result = await deleteObjectIfUnreferenced(storageKey);
+    return result.deleted || result.shared;
   } catch (error) {
     logger.warn('retention_object_delete_failed', { message: error instanceof Error ? error.message : 'unknown' });
     return false;
@@ -64,8 +66,9 @@ async function purgeWorkspace(workspaceId: string): Promise<number> {
     select: { id: true, storageKey: true },
   });
   let deleted = 0;
-  for (const document of documents) {
-    const ok = await safeDeleteObject(document.storageKey);
+  // Two documents can share one object after a dedupe; try each key once.
+  for (const storageKey of new Set(documents.map((document) => document.storageKey))) {
+    const ok = await safeDeleteObject(storageKey);
     if (ok) deleted += 1;
   }
   const exports = await prisma.export.findMany({ where: { workspaceId, storageKey: { not: null } }, select: { storageKey: true } });

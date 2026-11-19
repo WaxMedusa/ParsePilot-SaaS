@@ -372,3 +372,10 @@
     animation: none;
   }
 }
+
+.savings {
+  color: var(--color-success);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.03em;
+}
