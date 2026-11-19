@@ -88,6 +88,13 @@
   line-height: 1.5;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
 .choose {
   display: inline-flex;
   align-items: center;
@@ -115,6 +122,26 @@
 
 .input {
   display: none;
+}
+
+.batchTrack {
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-strong);
+  overflow: hidden;
+}
+
+.batchFill {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 160ms linear;
+}
+
+.notice {
+  color: var(--color-warning);
+  font-size: 9.5px;
+  line-height: 1.5;
 }
 
 /* ---------------------------------------------------------------------------
@@ -349,9 +376,12 @@
     padding: 14px;
   }
 
-  .choose {
+  .actions {
     grid-column: 1 / -1;
-    width: 100%;
+  }
+
+  .actions .choose {
+    flex: 1;
     height: 38px;
   }
 
