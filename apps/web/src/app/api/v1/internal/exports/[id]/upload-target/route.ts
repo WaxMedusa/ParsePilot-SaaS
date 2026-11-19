@@ -31,8 +31,11 @@ export const POST = withInternalService(async (request, context) => {
     // matches supabase-js and avoids provider-side defaults changing uploads.
     headers['x-upsert'] = 'false';
     headers['cache-control'] = 'max-age=3600';
-  } else if (appConfig.storageDriver === 's3') {
-    headers['x-amz-server-side-encryption'] = 'AES256';
+  } else if (appConfig.storageDriver === 's3' && appConfig.s3.serverSideEncryption) {
+    // The header must match what the presigned URL was signed with; sending it
+    // to a bucket that uses its own default (SSE-KMS, or R2/B2) breaks the
+    // signature check.
+    headers['x-amz-server-side-encryption'] = appConfig.s3.serverSideEncryption;
   }
   return ok(
     {

@@ -58,7 +58,7 @@ Environment variables are shared by the web service and the worker daemon:
 | `SESSION_SECRET`, `DOWNLOAD_SIGNING_SECRET`, `INTERNAL_SERVICE_TOKEN` | Independent 32-byte random values. |
 | `APP_URL`, `NEXT_PUBLIC_APP_URL` | Public HTTPS origin. If omitted, the app falls back to Vercel's deployment URL. |
 | `OBJECT_STORAGE_DRIVER=supabase` plus `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Private Supabase Storage. The service-role key is server-only and must never be exposed to the browser. The bucket must allow `text/csv`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` and `application/json` alongside the document types, or CSV/XLSX/data exports fail. Do not set `STORAGE_DRIVER` on Vercel: Buildah reserves that name for its container-storage driver. |
-| `OBJECT_STORAGE_DRIVER=s3` plus `S3_*` | Alternative private S3-compatible storage, including Cloudflare R2 (`S3_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, `S3_REGION=auto`, `S3_FORCE_PATH_STYLE=true`). Vercel functions have a read-only filesystem apart from `/tmp`, so local storage is not usable there. Leave `S3_SERVER_SIDE_ENCRYPTION` empty for R2 and B2 — they encrypt at rest and reject the AWS-only SSE-S3 header. Move existing objects with `npm run storage:migrate` (dry run, then `-- --apply`). |
+| `OBJECT_STORAGE_DRIVER=s3` plus `S3_*` | Private Amazon S3 bucket, or an S3-compatible provider through `S3_ENDPOINT`. See **Amazon S3** below for the bucket, IAM and CORS setup. Vercel functions have a read-only filesystem apart from `/tmp`, so local storage is not usable there. Move existing objects with `npm run storage:migrate` (dry run, then `-- --apply`). |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Optional. Adds “Connect Google Drive” in Settings → Profile so an account can keep new documents in its own Drive (`drive.file` scope, files created by this app only). Register `<APP_URL>/api/v1/integrations/google-drive/callback` as an authorised redirect URI and set `SETTINGS_ENCRYPTION_KEY`, which encrypts the refresh token. Without both values the card explains that the deployment has not enabled it. Disconnecting copies everything back to the deployment's storage first. |
 | `QUEUE_DRIVER=database` | Default. PostgreSQL is the queue; the worker polls the internal API. No Redis required. |
 | `REDIS_URL` | Only for the legacy `QUEUE_DRIVER=redis` RQ mode. |
@@ -67,6 +67,33 @@ Environment variables are shared by the web service and the worker daemon:
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Only when billing is enabled. |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY` or `POSTMARK_SERVER_TOKEN` | Transactional email for password reset, email verification and invitations. Set `EMAIL_PROVIDER=resend` or `postmark`, verify the sending domain, and keep the API key server-side. `EMAIL_REPLY_TO` is optional. |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL and publishable/anon key for Google sign-in. Never use `service_role` here. |
+
+### Amazon S3
+
+Leave `S3_ENDPOINT` empty — that is what makes the SDK address the bucket virtual-hosted-style on AWS. Set
+`S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and `S3_REGION` to the bucket's real region (a mismatch
+answers `301 PermanentRedirect` on every request). Leave `S3_SERVER_SIDE_ENCRYPTION` empty: AWS already encrypts new
+objects with SSE-S3, and a bucket whose default is SSE-KMS must not be sent `AES256`. Object keys never contain a
+filename, so nothing in the database has to change when you point it at a different bucket.
+
+1. **Bucket** — create it in one region, keep *Block all public access* on and *Object Ownership* set to
+   *Bucket owner enforced* (ACLs disabled). Nothing is ever served publicly.
+2. **IAM user or role** — the minimum policy is `s3:PutObject`, `s3:GetObject` and `s3:DeleteObject` on
+   `arn:aws:s3:::<bucket>/*`. `s3:ListBucket` on `arn:aws:s3:::<bucket>` is only needed for tooling such as the
+   migration script. Prefer an instance/task role; if you use an access key, scope it to this bucket alone.
+3. **CORS** — export uploads and the processor's direct PUTs go browser/worker → presigned URL, so the bucket needs:
+   ```json
+   [{ "AllowedOrigins": ["https://your-app.vercel.app"],
+      "AllowedMethods": ["PUT", "GET", "HEAD"],
+      "AllowedHeaders": ["content-type", "x-amz-*"],
+      "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3000 }]
+   ```
+4. **Upload size** — Vercel caps a serverless request body at 4.5 MB, so keep `MAX_UPLOAD_MB` at 4 or lower unless
+   uploads go straight to S3 through a presigned URL. The browser-side WebP downscaling keeps ordinary documents
+   well under that.
+5. **Verify** — `npm run storage:migrate` prints a dry run of what would be copied; `-- --apply` copies and verifies
+   each object by sha256 before anything is deleted from Supabase (`-- --apply --delete-source`). Readiness reports
+   the bucket through `HEAD health/probe`, so a wrong region or a policy missing `s3:GetObject` shows up immediately.
 
 The long-running **worker** and **scheduler** run in the `worker` Vercel Daemon declared in `vercel.json`; it uses
 `services/processor/Dockerfile.vercel` and runs both processes under `app.daemon`. In database mode the daemon needs

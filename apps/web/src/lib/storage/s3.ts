@@ -11,7 +11,8 @@ import type { StorageProvider, StoragePutOptions } from './types';
 import { StorageError } from './types';
 
 /**
- * Private S3-compatible object storage (AWS S3, MinIO, or another provider).
+ * Private S3 object storage: AWS S3, or an S3-compatible provider such as
+ * MinIO, Cloudflare R2 or Backblaze B2 through `S3_ENDPOINT`.
  * The bucket must be private: no public ACLs, no static website hosting, no
  * permanent object URLs. Access is exclusively through short-lived presigned
  * URLs created after an authorization check in the API layer.
@@ -34,6 +35,11 @@ export class S3Storage implements StorageProvider {
         region: appConfig.s3.region,
         endpoint: appConfig.s3.endpoint || undefined,
         forcePathStyle: appConfig.s3.forcePathStyle,
+        // Newer SDK versions otherwise sign a CRC32 checksum into presigned
+        // URLs, which the browser and the export worker cannot reproduce on
+        // PUT. Only send a checksum when a caller explicitly asks for one.
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
         credentials: {
           accessKeyId: appConfig.s3.accessKeyId,
           secretAccessKey: appConfig.s3.secretAccessKey,

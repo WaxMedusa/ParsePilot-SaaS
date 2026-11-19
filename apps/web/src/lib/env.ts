@@ -59,6 +59,11 @@ export const appUrl = optionalEnv(
   optionalEnv('NEXT_PUBLIC_APP_URL', deploymentUrl() ?? 'http://localhost:3000'),
 ).replace(/\/$/, '');
 
+// A custom endpoint means an S3-compatible provider (MinIO, R2, B2) that is
+// reached with path-style addressing. AWS S3 itself needs no endpoint and
+// expects virtual-hosted-style URLs, so the two defaults differ.
+const s3Endpoint = optionalEnv('S3_ENDPOINT');
+
 export const appConfig = {
   appUrl,
   maxUploadBytes: intEnv('MAX_UPLOAD_MB', 25) * 1024 * 1024,
@@ -81,15 +86,17 @@ export const appConfig = {
   })(),
   storageLocalRoot: optionalEnv('STORAGE_LOCAL_ROOT', './storage-data'),
   s3: {
-    endpoint: optionalEnv('S3_ENDPOINT'),
+    // Leave empty for AWS S3; set it only for an S3-compatible provider.
+    endpoint: s3Endpoint,
+    // Must match the bucket's region on AWS, or every request answers 301.
     region: optionalEnv('S3_REGION', 'us-east-1'),
     bucket: optionalEnv('S3_BUCKET', 'parsepilot-documents'),
     accessKeyId: optionalEnv('S3_ACCESS_KEY_ID'),
     secretAccessKey: optionalEnv('S3_SECRET_ACCESS_KEY'),
-    forcePathStyle: boolEnv('S3_FORCE_PATH_STYLE', true),
+    forcePathStyle: boolEnv('S3_FORCE_PATH_STYLE', Boolean(s3Endpoint)),
     // SSE-S3 (x-amz-server-side-encryption: AES256) is an AWS-native header.
-    // Cloudflare R2 and Backblaze B2 encrypt at rest by default and reject it,
-    // so the header is opt-in rather than the default.
+    // AWS encrypts new objects with SSE-S3 by default, so this stays opt-in:
+    // leave it empty for SSE-KMS buckets, and for R2/B2, which reject it.
     serverSideEncryption: (optionalEnv('S3_SERVER_SIDE_ENCRYPTION') === 'AES256' ? 'AES256' : undefined) as
       | 'AES256'
       | undefined,

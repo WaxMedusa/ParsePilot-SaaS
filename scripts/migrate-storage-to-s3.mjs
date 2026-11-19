@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * Copies every object from the Supabase Storage bucket to a Cloudflare R2 (or
- * any S3-compatible) bucket, keeping object keys identical so existing
+ * Copies every object from the Supabase Storage bucket to Amazon S3 (or any
+ * S3-compatible) bucket, keeping object keys identical so existing
  * Document.storageKey, Export.storageKey and User.avatarKey rows keep
  * resolving without a database migration.
  *
  * Dry run (lists and compares, writes nothing):
- *   node --env-file=apps/web/.env scripts/migrate-storage-to-r2.mjs
+ *   node --env-file=apps/web/.env scripts/migrate-storage-to-s3.mjs
  *
  * Copy, then verify every object by reading it back and comparing sha256:
- *   node --env-file=apps/web/.env scripts/migrate-storage-to-r2.mjs --apply
+ *   node --env-file=apps/web/.env scripts/migrate-storage-to-s3.mjs --apply
  *
  * Copy, verify, and only then remove the source objects:
- *   node --env-file=apps/web/.env scripts/migrate-storage-to-r2.mjs --apply --delete-source
+ *   node --env-file=apps/web/.env scripts/migrate-storage-to-s3.mjs --apply --delete-source
  *
  * Flags:
  *   --apply          write objects into the target bucket (default: list only)
@@ -25,8 +25,12 @@
  *   SUPABASE_STORAGE_BUCKET (default: parsepilot-documents)
  *
  * Required environment (target):
- *   S3_ENDPOINT, S3_REGION (default: auto), S3_BUCKET,
- *   S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_FORCE_PATH_STYLE (default: true)
+ *   S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY
+ * Optional environment (target):
+ *   S3_REGION (default: us-east-1 on AWS) and S3_ENDPOINT (omit for AWS S3,
+ *   set it for MinIO/R2/B2). S3_FORCE_PATH_STYLE defaults to false for AWS and
+ *   true when an endpoint is set. S3_SERVER_SIDE_ENCRYPTION=AES256 is applied
+ *   to uploaded objects, matching what the web app signs.
  */
 
 import { createHash } from 'node:crypto';
@@ -64,11 +68,14 @@ const source = {
 
 const target = {
   endpoint: env.S3_ENDPOINT ?? '',
-  region: env.S3_REGION ?? 'auto',
+  region: env.S3_REGION ?? (env.S3_ENDPOINT ? 'auto' : 'us-east-1'),
   bucket: env.S3_BUCKET ?? 'parsepilot-documents',
   accessKeyId: env.S3_ACCESS_KEY_ID ?? '',
   secretAccessKey: env.S3_SECRET_ACCESS_KEY ?? '',
-  forcePathStyle: (env.S3_FORCE_PATH_STYLE ?? 'true') !== 'false',
+  forcePathStyle: env.S3_FORCE_PATH_STYLE
+    ? env.S3_FORCE_PATH_STYLE !== 'false'
+    : Boolean(env.S3_ENDPOINT),
+  serverSideEncryption: env.S3_SERVER_SIDE_ENCRYPTION === 'AES256' ? 'AES256' : undefined,
 };
 
 const MISSING_SOURCE = [
@@ -77,7 +84,6 @@ const MISSING_SOURCE = [
 ].filter(([, value]) => !value).map(([name]) => name);
 
 const MISSING_TARGET = [
-  ['S3_ENDPOINT', target.endpoint],
   ['S3_BUCKET', target.bucket],
   ['S3_ACCESS_KEY_ID', target.accessKeyId],
   ['S3_SECRET_ACCESS_KEY', target.secretAccessKey],
@@ -97,8 +103,10 @@ const from = supabase.storage.from(source.bucket);
 
 const s3 = new S3Client({
   region: target.region,
-  endpoint: target.endpoint,
+  endpoint: target.endpoint || undefined,
   forcePathStyle: target.forcePathStyle,
+  requestChecksumCalculation: 'WHEN_REQUIRED',
+  responseChecksumValidation: 'WHEN_REQUIRED',
   credentials: {
     accessKeyId: target.accessKeyId,
     secretAccessKey: target.secretAccessKey,
@@ -160,7 +168,7 @@ async function readTarget(key) {
 
 async function main() {
   console.log(`Source: supabase:${source.bucket} (${source.url})`);
-  console.log(`Target: s3:${target.bucket} (${target.endpoint})`);
+  console.log(`Target: s3:${target.bucket} (${target.endpoint || `aws ${target.region}`})`);
   console.log(apply ? 'Mode: APPLY' : 'Mode: DRY RUN (pass --apply to copy)');
   console.log('');
 
@@ -205,6 +213,7 @@ async function main() {
           Key: object.key,
           Body: body,
           ContentType: object.contentType,
+          ServerSideEncryption: target.serverSideEncryption,
         }),
       );
 
