@@ -70,12 +70,11 @@ export type UploadTarget =
 /**
  * Describes how the browser should send a file. Direct storage uploads keep
  * large documents off the request-body limit of the app host (a Vercel
- * Function rejects bodies above roughly 4.5 MB); local storage and a connected
- * Google Drive cannot accept a presigned PUT, so those stay multipart.
+ * Function rejects bodies above roughly 4.5 MB); local development storage
+ * cannot accept a presigned PUT, so those uploads stay multipart.
  */
 export async function createDocumentUploadTarget(input: {
   workspaceId: string;
-  userId: string;
   filename: string;
   sizeBytes: number;
   contentType?: string | null;
@@ -86,11 +85,6 @@ export async function createDocumentUploadTarget(input: {
     throw ApiError.payloadTooLarge(`Files must be ${Math.round(maxBytes / (1024 * 1024))} MB or smaller`);
   }
   if (appConfig.storageDriver === 'local') return { direct: false, maxUploadMb };
-
-  const connection = await Promise.resolve()
-    .then(() => prisma.storageConnection.findUnique({ where: { userId: input.userId }, select: { id: true } }))
-    .catch(() => null);
-  if (connection) return { direct: false, maxUploadMb };
 
   const contentType = input.contentType?.trim() || 'application/octet-stream';
   const storageKey = generateStorageKey(input.workspaceId, extensionForMime(contentType));

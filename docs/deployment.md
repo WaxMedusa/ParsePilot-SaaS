@@ -88,9 +88,8 @@ filename, so nothing in the database has to change when you point it at a differ
       "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3000 }]
    ```
 4. **Upload size** — documents upload straight to the bucket through a short-lived presigned PUT, so the 4.5 MB
-   Vercel Function body limit does not apply to them. Keep `MAX_UPLOAD_MB` at `10` to match the plan catalogue. Two
-   paths still use the multipart request and therefore that 4.5 MB limit: local storage (development) and accounts
-   connected to Google Drive.
+   Vercel Function body limit does not apply to them. Keep `MAX_UPLOAD_MB` at `10` to match the plan catalogue. Local
+   development storage still uses the multipart request and therefore that 4.5 MB limit.
 5. **Verify** — `npm run storage:migrate` prints a dry run of what would be copied; `-- --apply` copies and verifies
    each object by sha256 before anything is deleted from Supabase (`-- --apply --delete-source`). Readiness reports
    the bucket through `HEAD health/probe`, so a wrong region or a policy missing `s3:GetObject` shows up immediately.
@@ -171,7 +170,7 @@ this with a new owner-authored commit rather than rewriting already-pushed histo
 - Use a managed PostgreSQL with automated backups and PITR; managed Redis with persistence; S3 with SSE and versioning.
 - Store secrets in a secret manager, not in a committed `.env`.
 - Set `APP_URL` and `NEXT_PUBLIC_APP_URL` to the public HTTPS origin. Stripe redirects and signed URLs depend on them.
-- Set `MAX_UPLOAD_MB` to `10` to match the plans. Documents reach the bucket through a presigned PUT, so only local and Google Drive uploads travel through the app and meet a reverse-proxy body limit; keep that proxy limit at least at 10 MB to be safe.
+- Set `MAX_UPLOAD_MB` to `10` to match the plans. Documents reach the bucket through a presigned PUT, so only local development uploads travel through the app and meet a reverse-proxy body limit; keep that proxy limit at least at 10 MB to be safe.
 - Configure the Stripe webhook endpoint at `https://<host>/api/v1/webhooks/stripe` for
   `checkout.session.completed`, `customer.subscription.created|updated|deleted` and `invoice.payment_failed`.
   Signature verification uses the raw request body; do not put a body-rewriting proxy in front of it.

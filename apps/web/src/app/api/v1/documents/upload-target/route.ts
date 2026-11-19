@@ -22,7 +22,6 @@ export const POST = withApi(
     const body = schema.parse(await request.json());
     const target = await createDocumentUploadTarget({
       workspaceId: context.workspace!.id,
-      userId: context.auth!.user.id,
       filename: body.filename,
       sizeBytes: body.sizeBytes,
       contentType: body.contentType ?? null,

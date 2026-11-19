@@ -12,9 +12,8 @@ field but is not a public entitlement because it is not enforced.
 Uploads are capped at 4 MB on Free and 10 MB on the paid plans. Documents go straight from the browser to private object storage through a short-lived
 presigned PUT, so the Vercel Function only receives JSON and its request-body limit (about 4.5 MB) no longer caps the
 file. The API then re-reads the stored object, detects its real type, counts its pages and records the document, so a
-direct upload is validated exactly like a multipart one. Uploads that cannot use a presigned URL — local development
-storage, or an account connected to Google Drive — fall back to the multipart route and stay within the app host's
-body limit.
+direct upload is validated exactly like a multipart one. Uploads that cannot use a presigned URL — local development storage — fall back
+to the multipart route and stay within the app host's body limit.
 
 Plan prices are stored in integer cents (`priceCents`), never floats. Stripe price IDs come from environment variables
 and are written into the plan seed.

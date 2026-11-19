@@ -173,7 +173,7 @@ export function UploadPanel({
 
       // With object storage the bytes go browser → bucket through a presigned
       // PUT, then the API validates the stored object and queues it. Local
-      // storage and Google Drive accounts use the multipart request instead.
+      // development storage uses the multipart request instead.
       const target = await requestUploadTarget(requestHeaders, file);
       if (target?.direct && target.uploadUrl && target.storageKey) {
         const sent = await putToStorage(target.uploadUrl, target.headers ?? {}, file, (percent) =>
