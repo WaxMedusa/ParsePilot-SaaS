@@ -7,11 +7,12 @@ const NUMERIC_BASE_COLUMNS = new Set(['page_count', 'extraction_version']);
 const NUMERIC_FIELD_TYPES = new Set(['decimal', 'integer']);
 
 /**
- * Builds a workbook from the workspace's current completed and needs-review
- * documents. This is deliberately not a stored snapshot: downloading the live
- * file always reflects the latest reviewed data, corrections and new uploads.
+ * Builds the current tabular view of a workspace: every completed and
+ * needs-review document with its latest extraction and any manual edits.
+ * Nothing here is stored, so the browser view and the workbook always match
+ * the database at the moment they are requested.
  */
-export async function buildLiveExport(workspaceId: string, limit = 20_000) {
+export async function buildLiveExportData(workspaceId: string, limit = 20_000) {
   const documents = await listWorkspaceExtractionRows(workspaceId, limit);
   const fieldKeys = new Set<string>(FIELD_DEFINITIONS.map((definition) => definition.key));
   for (const document of documents) {
@@ -50,15 +51,25 @@ export async function buildLiveExport(workspaceId: string, limit = 20_000) {
     if (NUMERIC_FIELD_TYPES.has(definition.type)) numericColumns.add(definition.key);
   }
 
-  const generatedAt = new Date();
+  return { columns, rows, numericColumns, generatedAt: new Date() };
+}
+
+/** Builds the .xlsx workbook from the current data. */
+export async function buildLiveExport(workspaceId: string, limit = 20_000) {
+  const data = await buildLiveExportData(workspaceId, limit);
   const buffer = buildXlsx({
-    columns,
-    rows,
-    numericColumns,
+    columns: data.columns,
+    rows: data.rows,
+    numericColumns: data.numericColumns,
     sheetName: 'Documents',
     title: 'ParsePilot live export',
-    generatedAt,
+    generatedAt: data.generatedAt,
   });
 
-  return { buffer, rowCount: rows.length, columnCount: columns.length, generatedAt };
+  return {
+    buffer,
+    rowCount: data.rows.length,
+    columnCount: data.columns.length,
+    generatedAt: data.generatedAt,
+  };
 }

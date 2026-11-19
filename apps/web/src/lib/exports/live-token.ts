@@ -36,11 +36,20 @@ export function readLiveWorkbookToken(token: string): string | null {
   return workspaceId;
 }
 
-export function liveWorkbookPath(workspaceId: string): string {
+export function liveWorkbookXlsxPath(workspaceId: string): string {
   return `/api/v1/exports/live/${createLiveWorkbookToken(workspaceId)}`;
 }
 
-/** Absolute URL, suitable for Excel or Google Sheets. */
-export function liveWorkbookUrl(workspaceId: string): string {
-  return `${appUrl}${liveWorkbookPath(workspaceId)}`;
+/** The .xlsx URL, for Excel's Get Data → From Web connection. */
+export function liveWorkbookXlsxUrl(workspaceId: string): string {
+  return `${appUrl}${liveWorkbookXlsxPath(workspaceId)}`;
+}
+
+/** The browser view: a stable page that renders the current data. */
+export function liveWorkbookPagePath(workspaceId: string): string {
+  return `/live/${createLiveWorkbookToken(workspaceId)}`;
+}
+
+export function liveWorkbookPageUrl(workspaceId: string): string {
+  return `${appUrl}${liveWorkbookPagePath(workspaceId)}`;
 }
