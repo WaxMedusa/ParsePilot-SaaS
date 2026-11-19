@@ -24,6 +24,7 @@ FIELD_TYPES: dict[str, str] = {
     "due_date": "date",
     "currency": "currency",
     "subtotal": "decimal",
+    "discount_amount": "decimal",
     "tax_amount": "decimal",
     "total_amount": "decimal",
     "amount_paid": "decimal",

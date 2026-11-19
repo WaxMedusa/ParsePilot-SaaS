@@ -61,6 +61,20 @@ describe('extraction validation', () => {
     expect(result.requiresReview).toBe(false);
   });
 
+  it('subtracts a discount before checking totals', () => {
+    const result = validateExtraction([
+      { key: 'vendor_name', value: 'Acme', confidence: 0.9 },
+      { key: 'issue_date', value: '2026-03-14', confidence: 0.9 },
+      { key: 'currency', value: 'USD', confidence: 0.9 },
+      { key: 'subtotal', value: '1000.00', confidence: 0.9 },
+      { key: 'discount_amount', value: '100.00', confidence: 0.9 },
+      { key: 'tax_amount', value: '74.25', confidence: 0.9 },
+      { key: 'total_amount', value: '974.25', confidence: 0.9 },
+    ]);
+    expect(result.totalsConsistent).toBe(true);
+    expect(result.requiresReview).toBe(false);
+  });
+
   it('flags missing accounting context and line items that do not add up', () => {
     const result = validateExtraction([
       { key: 'vendor_name', value: 'Acme', confidence: 0.9 },
