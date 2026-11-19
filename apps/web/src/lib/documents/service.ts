@@ -5,7 +5,7 @@ import { ApiError } from '../http/errors';
 import { appConfig } from '../env';
 import { getStorage, generateStorageKey, StorageError, type StorageProvider } from '../storage';
 import { deleteObjectIfUnreferenced, getStorageForKey } from '../storage/references';
-import { validateUploadFile } from './validation';
+import { extensionForMime, validateUploadFile, type ValidatedUpload } from './validation';
 import { assertCanProcess, assertUploadSizeAllowed } from '../billing/usage';
 import { createJob } from '../jobs/service';
 import { recordAudit } from '../audit';
@@ -102,30 +102,85 @@ async function storeUpload(input: {
   }
 }
 
-export async function createDocumentFromUpload(input: {
+/** How long a browser has to finish a direct-to-storage upload. */
+const DIRECT_UPLOAD_SECONDS = 900;
+
+export type UploadTarget =
+  | { direct: false; maxUploadMb: number }
+  | {
+      direct: true;
+      maxUploadMb: number;
+      storageKey: string;
+      uploadUrl: string;
+      method: 'PUT';
+      headers: Record<string, string>;
+      expiresInSeconds: number;
+    };
+
+/**
+ * Describes how the browser should send a file. Direct storage uploads keep
+ * large documents off the request-body limit of the app host (a Vercel
+ * Function rejects bodies above roughly 4.5 MB); local storage and a connected
+ * Google Drive cannot accept a presigned PUT, so those stay multipart.
+ */
+export async function createDocumentUploadTarget(input: {
   workspaceId: string;
   userId: string;
-  file: File;
-  correlationId: string;
-  ipHash: string;
-}) {
-  const startedAt = Date.now();
-  await assertUploadSizeAllowed(input.workspaceId, input.file.size);
-
+  filename: string;
+  sizeBytes: number;
+  contentType?: string | null;
+}): Promise<UploadTarget> {
+  const maxUploadMb = await assertUploadSizeAllowed(input.workspaceId, input.sizeBytes);
   const maxBytes = Math.min(appConfig.maxUploadBytes, 100 * 1024 * 1024);
-  if (input.file.size > maxBytes) {
+  if (input.sizeBytes > maxBytes) {
     throw ApiError.payloadTooLarge(`Files must be ${Math.round(maxBytes / (1024 * 1024))} MB or smaller`);
   }
-  const arrayBuffer = await input.file.arrayBuffer();
-  const validated = await validateUploadFile({
-    bytes: new Uint8Array(arrayBuffer),
-    filename: input.file.name,
-    declaredMime: input.file.type,
-    maxBytes,
-  });
+  if (appConfig.storageDriver === 'local') return { direct: false, maxUploadMb };
 
-  // Quota and subscription checks happen before any object is written.
-  await assertCanProcess(input.workspaceId, validated.pageCount);
+  const connection = await Promise.resolve()
+    .then(() => prisma.storageConnection.findUnique({ where: { userId: input.userId }, select: { id: true } }))
+    .catch(() => null);
+  if (connection) return { direct: false, maxUploadMb };
+
+  const contentType = input.contentType?.trim() || 'application/octet-stream';
+  const storageKey = generateStorageKey(input.workspaceId, extensionForMime(contentType));
+  const uploadUrl = await getStorage().createUploadUrl(storageKey, contentType, DIRECT_UPLOAD_SECONDS);
+
+  const headers: Record<string, string> = { 'Content-Type': contentType };
+  if (appConfig.storageDriver === 'supabase') {
+    // Matches the signed token's upsert decision and avoids provider defaults.
+    headers['x-upsert'] = 'false';
+    headers['cache-control'] = 'max-age=3600';
+  } else if (appConfig.storageDriver === 's3' && appConfig.s3.serverSideEncryption) {
+    // The header must match what the presigned URL was signed with.
+    headers['x-amz-server-side-encryption'] = appConfig.s3.serverSideEncryption;
+  }
+
+  return {
+    direct: true,
+    maxUploadMb,
+    storageKey,
+    uploadUrl,
+    method: 'PUT',
+    headers,
+    expiresInSeconds: DIRECT_UPLOAD_SECONDS,
+  };
+}
+
+type PersistUploadInput = {
+  workspaceId: string;
+  userId: string;
+  validated: ValidatedUpload;
+  declaredMime: string | null;
+  correlationId: string;
+  ipHash: string;
+  startedAt: number;
+  /** Object key whose bytes the browser already put in deployment storage. */
+  preStoredKey?: string;
+};
+
+async function persistDocument(input: PersistUploadInput) {
+  const { validated } = input;
 
   // A byte-identical document in this workspace already owns those bytes.
   // Reuse its object instead of storing the same file twice.
@@ -133,7 +188,16 @@ export async function createDocumentFromUpload(input: {
 
   let storageKey: string;
   let storedDriver: StorageProvider['driver'] | null = null;
-  if (duplicate?.storageKey) {
+  if (input.preStoredKey) {
+    storageKey = input.preStoredKey;
+    if (duplicate?.storageKey) {
+      storageKey = duplicate.storageKey;
+      await increment('uploads_deduplicated');
+      // The browser's bytes arrived before the duplicate was known and
+      // nothing references that object, so remove it.
+      await getStorage().deleteObject(input.preStoredKey).catch(() => undefined);
+    }
+  } else if (duplicate?.storageKey) {
     storageKey = duplicate.storageKey;
     await increment('uploads_deduplicated');
   } else {
@@ -177,7 +241,7 @@ export async function createDocumentFromUpload(input: {
         duplicateOfId: duplicate?.id ?? null,
         duplicateScore: duplicate ? 1 : null,
         metadata: {
-          declaredMime: input.file.type || null,
+          declaredMime: input.declaredMime,
           quarantined: false,
           deduplicated: Boolean(duplicate),
         } as Prisma.InputJsonValue,
@@ -207,7 +271,7 @@ export async function createDocumentFromUpload(input: {
       metadata: { sizeBytes: validated.sizeBytes, mime: validated.mime, pages: validated.pageCount },
     });
     await increment('documents_uploaded');
-    await observe('upload_duration', Date.now() - startedAt);
+    await observe('upload_duration', Date.now() - input.startedAt);
 
     return { document, job, duplicate: duplicate ?? null };
   } catch (error) {
@@ -220,6 +284,94 @@ export async function createDocumentFromUpload(input: {
     }
     throw error;
   }
+}
+
+export async function createDocumentFromUpload(input: {
+  workspaceId: string;
+  userId: string;
+  file: File;
+  correlationId: string;
+  ipHash: string;
+}) {
+  const startedAt = Date.now();
+  await assertUploadSizeAllowed(input.workspaceId, input.file.size);
+
+  const maxBytes = Math.min(appConfig.maxUploadBytes, 100 * 1024 * 1024);
+  if (input.file.size > maxBytes) {
+    throw ApiError.payloadTooLarge(`Files must be ${Math.round(maxBytes / (1024 * 1024))} MB or smaller`);
+  }
+  const arrayBuffer = await input.file.arrayBuffer();
+  const validated = await validateUploadFile({
+    bytes: new Uint8Array(arrayBuffer),
+    filename: input.file.name,
+    declaredMime: input.file.type,
+    maxBytes,
+  });
+
+  // Quota and subscription checks happen before any object is written.
+  await assertCanProcess(input.workspaceId, validated.pageCount);
+
+  return persistDocument({
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    validated,
+    declaredMime: input.file.type || null,
+    correlationId: input.correlationId,
+    ipHash: input.ipHash,
+    startedAt,
+  });
+}
+
+/**
+ * Records a document whose bytes the browser already put in storage through a
+ * presigned URL. The object is re-read and validated exactly like a multipart
+ * upload, so direct uploads are not trusted any more than the request path.
+ */
+export async function createDocumentFromStoredUpload(input: {
+  workspaceId: string;
+  userId: string;
+  storageKey: string;
+  filename: string;
+  correlationId: string;
+  ipHash: string;
+}) {
+  const startedAt = Date.now();
+  const prefix = `workspaces/${input.workspaceId}/`;
+  if (!input.storageKey.startsWith(prefix) || input.storageKey.length > 300) {
+    throw ApiError.validation([{ path: 'storageKey', message: 'Upload target is not valid' }]);
+  }
+
+  const maxBytes = Math.min(appConfig.maxUploadBytes, 100 * 1024 * 1024);
+  const storage = getStorage();
+
+  let bytes: Uint8Array;
+  try {
+    bytes = await storage.getObject(input.storageKey);
+  } catch {
+    throw ApiError.badRequest('The uploaded file was not found. Please upload it again.');
+  }
+
+  let validated: ValidatedUpload;
+  try {
+    await assertUploadSizeAllowed(input.workspaceId, bytes.byteLength);
+    validated = await validateUploadFile({ bytes, filename: input.filename, maxBytes });
+    await assertCanProcess(input.workspaceId, validated.pageCount);
+  } catch (error) {
+    // Rejected bytes must not stay in the bucket.
+    await storage.deleteObject(input.storageKey).catch(() => undefined);
+    throw error;
+  }
+
+  return persistDocument({
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    validated,
+    declaredMime: null,
+    correlationId: input.correlationId,
+    ipHash: input.ipHash,
+    startedAt,
+    preStoredKey: input.storageKey,
+  });
 }
 
 export async function getDocumentDetail(documentId: string, workspaceId: string) {

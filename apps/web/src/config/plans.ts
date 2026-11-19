@@ -6,10 +6,11 @@
  * catalogue that `npm run db:seed` writes into PostgreSQL, so pricing and
  * limits can be changed without a code deploy in the future.
  *
- * `maxUploadMb` is capped at 4 MB because Vercel Functions reject request
- * bodies above roughly 4.5 MB before the application can validate them. A
- * larger advertised limit would be a claim the production platform cannot
- * honour; moving to direct-to-storage uploads is required before raising it.
+ * `maxUploadMb` is the advertised per-file ceiling. Documents go straight to
+ * private object storage through a presigned PUT, so the ~4.5 MB request-body
+ * limit of a Vercel Function (which now only receives JSON) does not cap the
+ * file itself. Plan limits and `MAX_UPLOAD_MB` are the enforced bounds; Free
+ * deliberately keeps the smaller 4 MB allowance to leave room to upgrade.
  */
 
 export type PlanSeed = {
@@ -56,12 +57,12 @@ export const PLAN_SEEDS: PlanSeed[] = [
     priceCents: 4900,
     currency: 'USD',
     monthlyPageLimit: 1500,
-    maxUploadMb: 4,
+    maxUploadMb: 10,
     maxWorkspaces: 1,
     maxMembers: 5,
     features: [
       '1,500 pages per month',
-      '4 MB max file size',
+      '10 MB max file size',
       '5 team seats',
       'CSV and XLSX exports',
     ],
@@ -76,12 +77,12 @@ export const PLAN_SEEDS: PlanSeed[] = [
     priceCents: 14900,
     currency: 'USD',
     monthlyPageLimit: 6000,
-    maxUploadMb: 4,
+    maxUploadMb: 10,
     maxWorkspaces: 3,
     maxMembers: 20,
     features: [
       '6,000 pages per month',
-      '4 MB max file size',
+      '10 MB max file size',
       '20 team seats',
       'CSV and XLSX exports',
     ],
@@ -96,12 +97,12 @@ export const PLAN_SEEDS: PlanSeed[] = [
     priceCents: 0,
     currency: 'USD',
     monthlyPageLimit: 25000,
-    maxUploadMb: 4,
+    maxUploadMb: 10,
     maxWorkspaces: 10,
     maxMembers: 100,
     features: [
       '25,000 pages per month',
-      '4 MB max file size',
+      '10 MB max file size',
       '100 team seats',
       'CSV and XLSX exports',
       'Data processing agreement',

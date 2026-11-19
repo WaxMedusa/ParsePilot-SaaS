@@ -66,7 +66,7 @@ const s3Endpoint = optionalEnv('S3_ENDPOINT');
 
 export const appConfig = {
   appUrl,
-  maxUploadBytes: intEnv('MAX_UPLOAD_MB', 25) * 1024 * 1024,
+  maxUploadBytes: intEnv('MAX_UPLOAD_MB', 10) * 1024 * 1024,
   allowedMimeTypes: optionalEnv('ALLOWED_MIME_TYPES', 'application/pdf,image/png,image/jpeg,image/tiff,image/webp')
     .split(',')
     .map((mime) => mime.trim())

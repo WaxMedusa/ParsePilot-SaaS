@@ -1,14 +1,40 @@
+import { z } from 'zod';
 import { withApi } from '@/lib/http/handler';
 import { created, ok } from '@/lib/http/respond';
 import { ApiError } from '@/lib/http/errors';
 import { parsePagination, parseSort, paginationMeta } from '@/lib/http/pagination';
 import { listDocuments } from '@/lib/documents/repository';
-import { createDocumentFromUpload } from '@/lib/documents/service';
+import { createDocumentFromStoredUpload, createDocumentFromUpload } from '@/lib/documents/service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const SORTABLE = ['createdAt', 'updatedAt', 'originalName', 'status', 'sizeBytes'] as const;
+
+const completeUploadSchema = z.object({
+  storageKey: z.string().trim().min(1).max(300),
+  filename: z.string().trim().min(1).max(200),
+});
+
+type AcceptedUpload = Awaited<ReturnType<typeof createDocumentFromUpload>>;
+
+function accepted(result: AcceptedUpload, requestId: string) {
+  return created(
+    {
+      document: {
+        id: result.document.id,
+        originalName: result.document.originalName,
+        status: 'queued',
+        sizeBytes: result.document.sizeBytes,
+        pageCount: result.document.pageCount,
+        createdAt: result.document.createdAt.toISOString(),
+      },
+      job: { id: result.job.id, status: result.job.status, type: result.job.type },
+      duplicateOf: result.duplicate ? { id: result.duplicate.id, name: result.duplicate.originalName } : null,
+    },
+    { requestId },
+  );
+}
 
 export const GET = withApi(
   async (request, context) => {
@@ -35,6 +61,23 @@ export const GET = withApi(
 
 export const POST = withApi(
   async (request, context) => {
+    const contentType = request.headers.get('content-type') ?? '';
+
+    // JSON body: the browser already uploaded the bytes to object storage and
+    // asks the API to validate them and record the document.
+    if (contentType.includes('application/json')) {
+      const body = completeUploadSchema.parse(await request.json());
+      const result = await createDocumentFromStoredUpload({
+        workspaceId: context.workspace!.id,
+        userId: context.auth!.user.id,
+        storageKey: body.storageKey,
+        filename: body.filename,
+        correlationId: context.requestId,
+        ipHash: context.ipHash,
+      });
+      return accepted(result, context.requestId);
+    }
+
     const contentLength = Number(request.headers.get('content-length') ?? '0');
     if (contentLength > 60 * 1024 * 1024) {
       throw ApiError.payloadTooLarge('The upload is too large');
@@ -56,21 +99,7 @@ export const POST = withApi(
       ipHash: context.ipHash,
     });
 
-    return created(
-      {
-        document: {
-          id: result.document.id,
-          originalName: result.document.originalName,
-          status: 'queued',
-          sizeBytes: result.document.sizeBytes,
-          pageCount: result.document.pageCount,
-          createdAt: result.document.createdAt.toISOString(),
-        },
-        job: { id: result.job.id, status: result.job.status, type: result.job.type },
-        duplicateOf: result.duplicate ? { id: result.duplicate.id, name: result.duplicate.originalName } : null,
-      },
-      { requestId: context.requestId },
-    );
+    return accepted(result, context.requestId);
   },
   {
     workspace: { minRole: 'member' },

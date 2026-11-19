@@ -35,10 +35,79 @@ type UploadResponse = {
   error?: { message?: string };
 };
 
+type UploadTarget = {
+  direct?: boolean;
+  uploadUrl?: string;
+  headers?: Record<string, string>;
+  storageKey?: string;
+};
+
+function parsePayload(text: string): UploadResponse | null {
+  try {
+    return JSON.parse(text) as UploadResponse;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Asks the API how to send this file. A deployment with private object
+ * storage answers with a short-lived presigned PUT, which keeps the bytes off
+ * the app host's request-body limit.
+ */
+async function requestUploadTarget(headers: Record<string, string>, file: File): Promise<UploadTarget | null> {
+  try {
+    const response = await fetch('/api/v1/documents/upload-target', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, sizeBytes: file.size, contentType: file.type || null }),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { data?: UploadTarget };
+    return payload.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sends the file straight to storage and reports upload progress. */
+function putToStorage(
+  url: string,
+  headers: Record<string, string>,
+  file: File,
+  onProgress: (percent: number) => void,
+): Promise<{ ok: boolean; message?: string }> {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    for (const [name, value] of Object.entries(headers)) {
+      try {
+        xhr.setRequestHeader(name, value);
+      } catch {
+        // Some providers refuse headers their signed token did not include.
+      }
+    }
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      onProgress(Math.min(96, Math.round((event.loaded / event.total) * 96)));
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve({ ok: true });
+      else resolve({ ok: false, message: 'The file could not be uploaded. Try that file again.' });
+    };
+    xhr.onerror = () => resolve({ ok: false, message: 'Connection dropped. Try that file again.' });
+
+    xhr.send(file);
+  });
+}
+
 export function UploadPanel({
   workspaceId,
   compact = false,
-  maxUploadMb = 4,
+  maxUploadMb = 10,
 }: {
   workspaceId: string;
   compact?: boolean;
@@ -75,9 +144,57 @@ export function UploadPanel({
     });
   }, []);
 
+  const applyResult = useCallback(
+    (id: string, wasAccepted: boolean, payload: UploadResponse | null, fallback: string) => {
+      if (wasAccepted) {
+        const result = payload?.data;
+        patchUpload(id, {
+          status: 'done',
+          progress: 100,
+          documentId: result?.document?.id,
+          message: result?.document ? 'Queued' : 'Uploaded',
+          duplicateOf: result?.duplicateOf?.name ?? null,
+        });
+      } else {
+        patchUpload(id, { status: 'error', progress: 100, message: payload?.error?.message ?? fallback });
+      }
+    },
+    [patchUpload],
+  );
+
   const uploadFile = useCallback(
     async (file: File, id: string) => {
       const csrf = await ensureCsrfToken();
+      const requestHeaders: Record<string, string> = {
+        accept: 'application/json',
+        'x-workspace-id': workspaceId,
+        ...(csrf ? { 'x-csrf-token': csrf } : {}),
+      };
+
+      // With object storage the bytes go browser → bucket through a presigned
+      // PUT, then the API validates the stored object and queues it. Local
+      // storage and Google Drive accounts use the multipart request instead.
+      const target = await requestUploadTarget(requestHeaders, file);
+      if (target?.direct && target.uploadUrl && target.storageKey) {
+        const sent = await putToStorage(target.uploadUrl, target.headers ?? {}, file, (percent) =>
+          patchUpload(id, { progress: percent }),
+        );
+        if (!sent.ok) {
+          patchUpload(id, { status: 'error', progress: 100, message: sent.message });
+          return;
+        }
+
+        const response = await fetch('/api/v1/documents', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { ...requestHeaders, 'content-type': 'application/json' },
+          body: JSON.stringify({ storageKey: target.storageKey, filename: file.name }),
+        }).catch(() => null);
+        const payload = response ? parsePayload(await response.text().catch(() => '')) : null;
+        applyResult(id, Boolean(response?.ok), payload, 'The upload was not accepted. Try that file again.');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('file', file);
 
@@ -96,29 +213,12 @@ export function UploadPanel({
         };
 
         xhr.onload = () => {
-          let payload: UploadResponse | null = null;
-          try {
-            payload = JSON.parse(xhr.responseText) as UploadResponse;
-          } catch {
-            payload = null;
-          }
-
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const result = payload?.data;
-            patchUpload(id, {
-              status: 'done',
-              progress: 100,
-              documentId: result?.document?.id,
-              message: result?.document ? 'Queued' : 'Uploaded',
-              duplicateOf: result?.duplicateOf?.name ?? null,
-            });
-          } else {
-            patchUpload(id, {
-              status: 'error',
-              progress: 100,
-              message: payload?.error?.message ?? 'Not accepted. Check the file and try again.',
-            });
-          }
+          applyResult(
+            id,
+            xhr.status >= 200 && xhr.status < 300,
+            parsePayload(xhr.responseText),
+            'Not accepted. Check the file and try again.',
+          );
           resolve();
         };
 
@@ -130,7 +230,7 @@ export function UploadPanel({
         xhr.send(formData);
       });
     },
-    [patchUpload, workspaceId],
+    [applyResult, patchUpload, workspaceId],
   );
 
   const uploadFiles = useCallback(

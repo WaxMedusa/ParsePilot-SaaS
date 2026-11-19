@@ -36,6 +36,12 @@ export function detectMimeType(bytes: Uint8Array): SupportedMime | null {
   return null;
 }
 
+/** File extension for a declared MIME type, used to build storage keys. */
+export function extensionForMime(mime: string | null | undefined): string {
+  if (!mime) return 'bin';
+  return EXTENSIONS[mime as SupportedMime] ?? 'bin';
+}
+
 export function sanitizeFilename(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? 'document';
   const cleaned = base
