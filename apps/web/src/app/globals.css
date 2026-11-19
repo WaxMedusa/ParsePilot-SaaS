@@ -44,6 +44,7 @@
   --color-warning-soft: #f1eadb;
   --color-danger: #874b43;
   --color-danger-soft: #f2e7e4;
+  --color-info: #3b5a4e;
   --color-info-soft: #e8ece7;
   --color-on-dark: #f4f2eb;
   --color-on-dark-muted: rgba(244, 242, 235, 0.62);
@@ -165,6 +166,7 @@ html[data-theme='dark'] {
   --color-warning-soft: #2a2316;
   --color-danger: #cf8a7e;
   --color-danger-soft: #2b1c19;
+  --color-info: #a8c9ba;
   --color-info-soft: #1a221f;
 
   /* On the lifted panels */
