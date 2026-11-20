@@ -360,3 +360,150 @@
     min-width: 650px;
   }
 }
+
+/* Boxed surface pass */
+.summary {
+  gap: 12px;
+  border: 0;
+}
+
+.summary > div,
+.summary > div:not(:first-child),
+.summary > div:last-child {
+  padding: 14px 16px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.summaryLabel {
+  color: var(--color-muted);
+  font-size: 8.5px;
+}
+
+.summaryValue {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 560;
+}
+
+.section {
+  margin-top: 16px;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.section h2 {
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 570;
+}
+
+.kicker {
+  color: var(--color-primary);
+}
+
+.inviteLink {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-muted);
+}
+
+.inviteLinkRow input,
+.form input,
+.form select,
+.roleSelect {
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  font-family: var(--font-app);
+  font-size: 12px;
+}
+
+.inviteLinkRow input {
+  background: var(--app-surface-muted);
+}
+
+.inviteLinkRow button,
+.form button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--app-radius-sm);
+  background: var(--color-ink);
+  font-family: var(--font-app);
+  font-size: 10.5px;
+  font-weight: 560;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tableWrap {
+  margin-top: 16px;
+  padding: 0 14px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+}
+
+.table th {
+  padding-top: 10px;
+  border-bottom: 1px solid var(--app-border);
+  font-size: 8px;
+}
+
+.table td {
+  padding: 12px 10px 12px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 11.5px;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.memberName {
+  font-size: 12.5px;
+  font-weight: 560;
+}
+
+.memberEmail {
+  font-size: 9px;
+}
+
+.actions button {
+  padding: 4px 10px;
+  border: 1px solid var(--app-border);
+  border-bottom: 1px solid var(--app-border);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-app);
+  font-size: 9.5px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.actions button:hover {
+  border-color: var(--color-danger);
+}
+
+.error,
+.notice {
+  border: 1px solid var(--app-border);
+  border-left: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+}
+
+@media (max-width: 760px) {
+  .summary > div,
+  .summary > div:nth-child(2),
+  .summary > div:nth-child(3),
+  .summary > div:nth-child(4) {
+    border: 1px solid var(--app-border);
+  }
+
+  .section {
+    padding: 17px 16px 18px;
+  }
+}

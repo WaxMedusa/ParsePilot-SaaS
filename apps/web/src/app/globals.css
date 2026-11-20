@@ -116,6 +116,20 @@
      on a cream fill. They stay legible whichever way the page is set. */
   --color-on-accent: #f7f2ea;
   --color-on-accent-hover: #f0dcc8;
+
+  /* App surfaces (dashboard)
+     The working screens sit on a recessed ground with filled, rounded panels.
+     Content is grouped by containers rather than by hairline rules. */
+  --font-app: 'Manrope Variable', 'Manrope', 'Instrument Sans Variable', ui-sans-serif, system-ui,
+    sans-serif;
+  --app-ground: #eeece5;
+  --app-surface: #fbfaf6;
+  --app-surface-muted: #f4f1ea;
+  --app-border: #e3dfd4;
+  --app-shadow: 0 1px 2px rgba(23, 24, 22, 0.05), 0 12px 28px -24px rgba(23, 24, 22, 0.4);
+  --app-shadow-lift: 0 2px 4px rgba(23, 24, 22, 0.06), 0 22px 44px -28px rgba(23, 24, 22, 0.45);
+  --app-radius: 16px;
+  --app-radius-sm: 10px;
 }
 
 /* ==========================================================================
@@ -179,6 +193,14 @@ html[data-theme='dark'] {
   --shadow-subtle: 0 1px 0 rgba(0, 0, 0, 0.5);
   --shadow-raised: 0 18px 40px rgba(0, 0, 0, 0.5);
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* App surfaces, set for the dark ground */
+  --app-ground: #0c0c0b;
+  --app-surface: #171614;
+  --app-surface-muted: #1e1c19;
+  --app-border: #2d2b26;
+  --app-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 22px 46px -32px rgba(0, 0, 0, 0.95);
+  --app-shadow-lift: 0 1px 0 rgba(0, 0, 0, 0.55), 0 28px 56px -30px rgba(0, 0, 0, 1);
 }
 
 *,
@@ -289,6 +311,23 @@ pre {
   max-width: var(--container-wide);
   margin: 0 auto;
   padding: 0 var(--gutter);
+}
+
+/* The signed-in application runs on Manrope. Scoping the swap here keeps the
+   marketing pages on Instrument Sans while every dashboard route inherits the
+   working typeface, including the ones that never render the shell. */
+.app-scope {
+  --font-sans: var(--font-app);
+  font-family: var(--font-app);
+  background: var(--app-ground);
+  color: var(--color-text);
+}
+
+.app-scope h1,
+.app-scope h2,
+.app-scope h3,
+.app-scope h4 {
+  font-family: var(--font-app);
 }
 
 .serif {
