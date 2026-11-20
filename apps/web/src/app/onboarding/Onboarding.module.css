@@ -164,6 +164,46 @@
   border-bottom-color: var(--color-primary);
 }
 
+.keySteps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-muted);
+}
+
+.keyStepsTitle {
+  color: var(--color-text-soft);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.keyStepsList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 16px;
+  color: var(--color-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.keyStepsLink {
+  align-self: flex-start;
+  color: var(--color-primary-strong);
+  font-size: 10.5px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.keyStepsLink:hover {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
 .providers {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

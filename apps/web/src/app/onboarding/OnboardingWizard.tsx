@@ -10,19 +10,33 @@ import styles from './Onboarding.module.css';
 const PROVIDERS = {
   google: {
     name: 'Google Gemini',
+    hint: 'Fastest · all you need is a Google account',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    model: 'gemini-2.5-flash',
+    exampleModel: 'gemini-2.5-flash',
     keyPlaceholder: 'AIza… paste the key from AI Studio',
+    linkLabel: 'aistudio.google.com/apikey',
     href: 'https://aistudio.google.com/apikey',
-    where: 'AI Studio → Create API key',
+    steps: [
+      'Open the link at the end of these steps and sign in with the Google account that should pay for this workspace’s model calls.',
+      'Press “Create API key”. If it asks you to pick a project, let it create one — the name does not matter.',
+      'Copy the key it shows you. It starts with “AIza”.',
+      'Paste it into the API key field above. That is the whole job.',
+    ],
   },
   openai: {
     name: 'OpenAI',
+    hint: 'The app default · needs an OpenAI account',
     baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4.1-mini',
+    exampleModel: 'gpt-4.1-mini',
     keyPlaceholder: 'sk-… paste the secret key',
+    linkLabel: 'platform.openai.com/api-keys',
     href: 'https://platform.openai.com/api-keys',
-    where: 'platform.openai.com/api-keys',
+    steps: [
+      'Open the link at the end of these steps and sign in, or create an account if you don’t have one.',
+      'Choose “Create new secret key” and name it after this workspace.',
+      'Copy it straight away — OpenAI shows it only once.',
+      'Paste it into the API key field above.',
+    ],
   },
 } as const;
 
@@ -54,7 +68,7 @@ export function OnboardingWizard({
   const [displayName, setDisplayName] = useState(name);
   const [savedName, setSavedName] = useState(name);
   const [provider, setProvider] = useState<ProviderId>('google');
-  const [model, setModel] = useState<string>(PROVIDERS.google.model);
+  const [model, setModel] = useState<string>('');
   const [apiKey, setApiKey] = useState('');
   const [aiOn, setAiOn] = useState(aiConfigured);
   const [busy, setBusy] = useState<string | null>(null);
@@ -96,7 +110,7 @@ export function OnboardingWizard({
       await apiRequest(`/api/v1/workspaces/${workspaceId}/ai-settings`, {
         method: 'PUT',
         workspaceId,
-        body: { enabled: true, baseUrl: preset.baseUrl, model: model.trim() || preset.model, apiKey: key },
+        body: { enabled: true, baseUrl: preset.baseUrl, model: model.trim() || preset.exampleModel, apiKey: key },
       });
       setAiOn(true);
       setApiKey('');
@@ -224,14 +238,18 @@ export function OnboardingWizard({
                         checked={provider === id}
                         onChange={() => {
                           setProvider(id);
-                          setModel(PROVIDERS[id].model);
+                          setModel('');
                         }}
                       />
                       <span className={styles.providerName}>{PROVIDERS[id].name}</span>
-                      <span className={styles.providerHint}>{PROVIDERS[id].model}</span>
+                      <span className={styles.providerHint}>{PROVIDERS[id].hint}</span>
                     </label>
                   ))}
                 </div>
+                <span className={styles.hint}>
+                  Either one works. Any provider with an OpenAI-compatible endpoint works too — the full list, plus
+                  the Google Cloud Console route, is in Settings → AI extraction. You can switch later.
+                </span>
               </fieldset>
 
               <label className={styles.field}>
@@ -245,13 +263,26 @@ export function OnboardingWizard({
                   autoComplete="off"
                 />
                 <span className={styles.hint}>
-                  Get one at{' '}
-                  <a href={PROVIDERS[provider].href} target="_blank" rel="noreferrer noopener">
-                    {PROVIDERS[provider].where} ↗
-                  </a>
-                  . Encrypted at rest, used only for this workspace, never shown again.
+                  Encrypted at rest, used only for this workspace, and never shown again.
                 </span>
               </label>
+
+              <div className={styles.keySteps}>
+                <span className={styles.keyStepsTitle}>How to get this key</span>
+                <ol className={styles.keyStepsList}>
+                  {PROVIDERS[provider].steps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+                <a
+                  className={styles.keyStepsLink}
+                  href={PROVIDERS[provider].href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {PROVIDERS[provider].linkLabel} ↗
+                </a>
+              </div>
 
               <label className={styles.field}>
                 <span className={styles.label}>Model</span>
@@ -259,17 +290,21 @@ export function OnboardingWizard({
                   className={styles.input}
                   value={model}
                   onChange={(event) => setModel(event.target.value)}
-                  placeholder={PROVIDERS[provider].model}
+                  placeholder={PROVIDERS[provider].exampleModel}
                 />
-                <span className={styles.hint}>A small, low-cost model is usually enough. The provider bills you directly.</span>
+                <span className={styles.hint}>
+                  Example: {PROVIDERS[provider].exampleModel} — leave this blank to use it. Any model your key can
+                  use works here; the provider’s docs list the exact names. A small, low-cost model is usually enough.
+                </span>
               </label>
 
               <div className={`${styles.notice} ${styles.noticeInfo}`} role="note">
                 <div>
                   <strong>Why your own key.</strong> It belongs to your provider account, so document text travels
                   under your agreement with that provider rather than a shared ParsePilot account, and you can revoke
-                  it there at any time. Step-by-step instructions, including Google Cloud Console, are in Settings → AI
-                  extraction.
+                  it there at any time. Create it inside a project you own — in Google Cloud Console you can also
+                  restrict it to just the Generative Language API, so it cannot be spent on anything else. Settings →
+                  AI extraction walks through that route too.
                 </div>
               </div>
             </>
