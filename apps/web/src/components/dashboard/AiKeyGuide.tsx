@@ -14,16 +14,16 @@ const PROVIDERS: Provider[] = [
   {
     id: 'ai-studio',
     name: 'Google AI Studio',
-    note: 'Fastest · free tier while you trial it',
+    note: 'Fastest · one key, nothing else to set up',
     link: 'https://aistudio.google.com/apikey',
     linkLabel: 'aistudio.google.com/apikey',
     steps: [
       'Open the link and sign in with the Google account that should own this workspace’s billing.',
       'Choose “Create API key”, then pick (or create) the Google Cloud project this workspace belongs to. The key is issued against that project.',
       'Copy the key — it starts with AIza — and paste it into the API key field above.',
-      'Set Provider URL to https://generativelanguage.googleapis.com/v1beta/openai/ and Model to a Gemini model such as gemini-2.5-flash. Gemini only answers on that OpenAI-compatible path.',
+      'Set Provider URL to https://generativelanguage.googleapis.com/v1beta/openai/ and Model to a Gemini model your project can use — gemini-2.5-flash is a cheap starting point and you can switch later. Gemini only answers on that OpenAI-compatible path.',
     ],
-    settings: 'Provider URL https://generativelanguage.googleapis.com/v1beta/openai/ · Model gemini-2.5-flash',
+    settings: 'Provider URL https://generativelanguage.googleapis.com/v1beta/openai/ · Model any Gemini model your key can reach',
   },
   {
     id: 'cloud-console',
@@ -49,14 +49,15 @@ const PROVIDERS: Provider[] = [
     steps: [
       'Open the link and sign in.',
       'Choose “Create new secret key” and scope it to the project for this workspace rather than an account-wide personal key.',
-      'Copy it now — OpenAI shows it once — and paste it above. Keep Provider URL at https://api.openai.com/v1 and use a small model such as gpt-4.1-mini.',
+      'Copy it now — OpenAI shows it once — and paste it above. Keep Provider URL at https://api.openai.com/v1 and set Model to a chat model your account can use; gpt-4.1-mini is a cheap starting point.',
       'Set a monthly budget under Billing → Limits so a retry storm cannot surprise you.',
     ],
-    settings: 'Provider URL https://api.openai.com/v1 · Model gpt-4.1-mini',
+    settings: 'Provider URL https://api.openai.com/v1 · Model any chat model your key can use',
   },
 ];
 
 const BEFORE_PASTE = [
+  'These three are only the quickest routes. Any provider with an OpenAI-compatible endpoint works — give its base URL, one of its model names and its key.',
   'The provider bills your account directly. ParsePilot does not mark the key up, resell model calls or take a cut of usage.',
   'A small, low-cost model is usually enough. A reasoning model reads damaged scans and unusual layouts better if that is what your post arrives in.',
   'Keys are per workspace. Try one on a test workspace first, then add a separate key to the one finance actually uses.',

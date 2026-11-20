@@ -19,12 +19,12 @@ export default async function AiSettingsPage() {
       <PageHeader
         eyebrow="Settings"
         title="AI extraction"
-        description="Turn on a model read of every document. It fills the fields the label rules leave blank, and the same rules still check totals, dates and currencies before anything is saved."
+        description="Connect a provider key you own and a model reads every document. It fills the fields the label rules leave blank, and the same rules still check totals, dates and currencies before anything is saved."
         actions={
           <>
             {active ? (
               <Badge tone="success" dot>
-                On · {settings.model}
+                On · model read
               </Badge>
             ) : (
               <Badge tone="warning" dot>

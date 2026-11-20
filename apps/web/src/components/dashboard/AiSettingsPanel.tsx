@@ -161,7 +161,7 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
               disabled={!canManage}
             />
             <span className={styles.hint}>
-              OpenAI-compatible base URL. HTTPS only. For Gemini use{' '}
+              Any OpenAI-compatible endpoint, HTTPS only. Gemini serves one at{' '}
               <code>https://generativelanguage.googleapis.com/v1beta/openai/</code>.
             </span>
           </div>
@@ -179,7 +179,10 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
               required
               disabled={!canManage}
             />
-            <span className={styles.hint}>Small, low-cost models are usually enough; a reasoning model may read difficult documents better.</span>
+            <span className={styles.hint}>
+              Use the exact model name from your provider’s docs. A small, low-cost model is usually enough; a
+              reasoning model may read damaged scans better.
+            </span>
           </div>
 
           <div className={styles.formRow}>
@@ -247,6 +250,7 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
             <li>The model reads each document first and its readings are the values recorded; the rules only fill fields it leaves empty.</li>
             <li>Keys are not included in exports, audit entries or API responses; only the last four characters are shown.</li>
             <li>Removing the key immediately returns this workspace to rules-only extraction.</li>
+            <li>Any provider with an OpenAI-compatible endpoint works — the model is whichever one you name here.</li>
           </ul>
         </div>
       </div>
