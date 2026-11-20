@@ -835,3 +835,425 @@
 .timelineDot {
   border-radius: var(--radius-pill);
 }
+
+/* ---------------------------------------------------------------------------
+   Boxed surface pass
+   Cards, stats and tables are filled containers on the recessed ground, so the
+   dashboard groups content by surface instead of by thin rules. Type is pushed
+   up a step: this is a working screen, not a specimen sheet.
+   --------------------------------------------------------------------------- */
+
+.page {
+  gap: 20px;
+}
+
+.stack {
+  gap: 18px;
+}
+
+.split {
+  gap: 22px;
+  align-items: start;
+}
+
+.grid2,
+.grid3 {
+  gap: 16px;
+}
+
+/* --- Header ------------------------------------------------------------- */
+
+.pageHeader {
+  align-items: center;
+  padding: 20px 22px 21px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.eyebrow {
+  color: var(--color-primary);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.title {
+  margin-top: 7px;
+  font-size: clamp(1.75rem, 2.6vw, 2.3rem);
+  font-weight: 570;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+}
+
+.lede {
+  margin-top: 8px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.62;
+}
+
+.headerActions {
+  gap: 8px;
+}
+
+/* --- Stats -------------------------------------------------------------- */
+
+.grid4 {
+  gap: 14px;
+  border: 0;
+}
+
+.stat,
+.stat:nth-child(2),
+.stat:nth-child(2n),
+.stat:nth-child(3),
+.stat:nth-child(4) {
+  padding: 16px 18px 17px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+  transition:
+    transform 240ms var(--ease-out),
+    box-shadow 240ms var(--ease-out),
+    border-color 240ms var(--ease-out);
+}
+
+.stat:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--app-shadow-lift);
+}
+
+.statLabel {
+  color: var(--color-muted);
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+}
+
+.statValue {
+  font-size: 2.25rem;
+  font-weight: 520;
+  letter-spacing: -0.055em;
+}
+
+.statMeta {
+  color: var(--color-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* --- Cards -------------------------------------------------------------- */
+
+.card {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.cardHead {
+  align-items: center;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 570;
+  letter-spacing: -0.02em;
+}
+
+.cardHint {
+  font-size: 8.5px;
+}
+
+.cardBody {
+  padding: 18px;
+}
+
+.cardBodyFlush {
+  padding: 0;
+}
+
+.cardFoot {
+  padding: 11px 18px;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+  font-size: 9px;
+}
+
+/* --- Tables ------------------------------------------------------------- */
+
+.tableWrap {
+  padding: 0 18px 6px;
+}
+
+.cardBody .tableWrap {
+  padding: 0;
+}
+
+.table {
+  font-size: 12px;
+}
+
+@media (min-width: 701px) {
+  .table th {
+    padding: 9px 14px 9px 0;
+    border-top: 0;
+    border-bottom: 1px solid var(--app-border);
+    font-size: 8px;
+  }
+
+  .table td {
+    padding: 11px 14px 11px 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 11.5px;
+  }
+
+  .table th + th,
+  .table td + td {
+    padding-left: 14px;
+  }
+
+  .table tbody tr {
+    transition: background-color 160ms var(--ease-out);
+  }
+
+  .table tbody tr:hover td {
+    background: var(--app-surface-muted);
+  }
+
+  .table tbody tr:hover td:first-child {
+    border-radius: var(--app-radius-sm) 0 0 var(--app-radius-sm);
+  }
+
+  .table tbody tr:hover td:last-child {
+    border-radius: 0 var(--app-radius-sm) var(--app-radius-sm) 0;
+  }
+}
+
+.cellTitle {
+  font-size: 12px;
+  font-weight: 520;
+}
+
+.cellSub {
+  font-size: 8.5px;
+}
+
+.amount {
+  font-size: 10.5px;
+}
+
+/* --- Controls ----------------------------------------------------------- */
+
+.chip {
+  height: 28px;
+  padding: 0 12px;
+  border-color: var(--app-border);
+  border-radius: var(--radius-pill);
+  background: var(--app-surface);
+  font-size: 10.5px;
+}
+
+.chip:hover {
+  background: var(--app-surface-muted);
+}
+
+.chipActive,
+.chipActive:hover {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.searchInput {
+  height: 34px;
+  padding: 0 14px;
+  border-color: var(--app-border);
+  border-radius: var(--radius-pill);
+  background: var(--app-surface);
+  font-size: 12px;
+}
+
+.searchInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.input,
+.select,
+.textarea {
+  padding: 9px 12px;
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  font-size: 12.5px;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.label {
+  font-size: 11.5px;
+}
+
+.hint {
+  font-size: 10.5px;
+}
+
+/* --- Status, progress, misc -------------------------------------------- */
+
+.notice {
+  padding: 13px 15px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  font-size: 11.5px;
+}
+
+.noticeWarning {
+  color: var(--color-warning);
+}
+
+.progress {
+  height: 6px;
+}
+
+.empty {
+  padding: 26px 2px;
+}
+
+.emptyTitle {
+  font-size: 12.5px;
+}
+
+.emptyBody {
+  font-size: 11.5px;
+}
+
+.tag {
+  padding: 3px 9px;
+  border-color: var(--app-border);
+  border-radius: var(--radius-pill);
+  background: var(--app-surface-muted);
+  font-size: 9px;
+}
+
+.kvRow {
+  padding: 9px 0;
+  font-size: 11.5px;
+}
+
+.timelineLabel {
+  font-size: 11px;
+}
+
+.timelineCount {
+  font-size: 10px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+}
+
+.sectionBody {
+  font-size: 11.5px;
+}
+
+/* --- Motion ------------------------------------------------------------- */
+
+@keyframes panel-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes panel-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page > * {
+  animation: panel-rise 540ms var(--ease-out) both;
+}
+
+.page > *:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.page > *:nth-child(3) {
+  animation-delay: 130ms;
+}
+
+.page > *:nth-child(4) {
+  animation-delay: 190ms;
+}
+
+/* Fade only, so the entrance never holds the transform used by the hover lift. */
+.stat {
+  animation: panel-fade 420ms var(--ease-out) both;
+}
+
+.stat:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.stat:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.stat:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page > *,
+  .stat {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    gap: 16px;
+  }
+
+  .pageHeader {
+    padding: 17px 18px 18px;
+  }
+}
+
+@media (max-width: 700px) {
+  .cardBody {
+    padding: 15px;
+  }
+
+  .cardHead {
+    padding: 12px 15px;
+  }
+
+  .cardFoot {
+    padding: 10px 15px;
+  }
+
+  .tableWrap {
+    padding: 0 14px 4px;
+  }
+}

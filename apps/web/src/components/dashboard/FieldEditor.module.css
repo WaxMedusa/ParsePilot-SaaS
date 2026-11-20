@@ -328,3 +328,124 @@
     font-size: 8px;
   }
 }
+
+/* Boxed surface pass */
+.wrap {
+  gap: 9px;
+}
+
+.topline {
+  padding-bottom: 6px;
+}
+
+.version {
+  font-size: 8.5px;
+}
+
+.hint {
+  font-size: 9.5px;
+}
+
+.group {
+  padding-top: 14px;
+  border-top: 0;
+}
+
+.groupLabel {
+  color: var(--color-muted);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+.list {
+  padding: 0 14px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+  overflow: hidden;
+}
+
+.row {
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color 160ms var(--ease-out);
+}
+
+.row:hover {
+  background: var(--app-surface-muted);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.label {
+  font-size: 11px;
+}
+
+.key {
+  font-size: 8px;
+}
+
+.value {
+  font-size: 11.5px;
+}
+
+.input {
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+
+.saveButton {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 9.5px;
+}
+
+.cancelButton {
+  height: 30px;
+  border-radius: 8px;
+  font-size: 8px;
+}
+
+.confidenceLabel {
+  font-size: 8px;
+}
+
+.confidenceBar {
+  height: 4px;
+  border-radius: var(--radius-pill);
+}
+
+.confidenceFill {
+  border-radius: var(--radius-pill);
+}
+
+.empty {
+  padding: 22px;
+  border: 1px dashed var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+}
+
+.original {
+  font-size: 8.5px;
+}
+
+.editedTag {
+  font-size: 8px;
+}
+
+.editButton {
+  min-height: 24px;
+  font-size: 8px;
+}
+
+@media (max-width: 720px) {
+  .list {
+    padding: 0 12px;
+  }
+}

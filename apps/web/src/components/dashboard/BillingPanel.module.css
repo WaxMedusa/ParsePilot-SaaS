@@ -152,3 +152,75 @@
   border-radius: 0;
   background: var(--color-success);
 }
+
+/* Boxed surface pass */
+.planCard {
+  gap: 12px;
+  margin-top: 12px;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+  transition:
+    transform 240ms var(--ease-out),
+    box-shadow 240ms var(--ease-out),
+    border-color 240ms var(--ease-out);
+}
+
+.planCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--app-shadow-lift);
+}
+
+.planActive {
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 1px var(--color-primary),
+    var(--app-shadow);
+}
+
+.planActive:hover {
+  box-shadow:
+    0 0 0 1px var(--color-primary),
+    var(--app-shadow-lift);
+}
+
+.currentPlan {
+  padding-bottom: 14px;
+}
+
+.currentName {
+  font-weight: 520;
+}
+
+.planName {
+  font-size: 15px;
+  font-weight: 570;
+}
+
+.planDescription {
+  font-size: 10.5px;
+}
+
+.planPrice {
+  font-weight: 500;
+}
+
+.planSpecs {
+  font-size: 8.5px;
+}
+
+.planFeatures li {
+  font-size: 10.5px;
+}
+
+.policy li {
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planCard:hover {
+    transform: none;
+  }
+}

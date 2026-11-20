@@ -492,3 +492,81 @@
     animation: none;
   }
 }
+
+/* Boxed surface pass */
+.card {
+  border-color: var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+  padding: 20px 22px 22px;
+}
+
+.cardHead {
+  border-bottom-color: var(--app-border);
+}
+
+.cardKicker {
+  color: var(--color-muted);
+  font-size: 8.5px;
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 570;
+}
+
+.inputField {
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-muted);
+  font-size: 13px;
+}
+
+.inputField:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.fieldReadonly .inputField {
+  background: var(--app-surface-muted);
+}
+
+.label {
+  color: var(--color-muted);
+  font-size: 8.5px;
+}
+
+.noteCard {
+  border-color: var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.planCard {
+  border-color: var(--app-border);
+  box-shadow: var(--app-shadow);
+}
+
+.avatarFrame {
+  border-color: var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.secondary,
+.primary,
+.ghostDanger {
+  border-radius: var(--app-radius-sm);
+}
+
+.secondary {
+  background: var(--app-surface);
+  border-color: var(--app-border);
+}
+
+@media (max-width: 560px) {
+  .card {
+    padding: 16px 16px 18px;
+  }
+}
