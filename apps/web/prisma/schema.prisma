@@ -139,6 +139,7 @@ model User {
   avatarKey         String?
   avatarUpdatedAt   DateTime?
   emailVerifiedAt   DateTime?
+  onboardedAt       DateTime?
   lastLoginAt       DateTime?
   disabledAt        DateTime?
   deletionRequestedAt DateTime?

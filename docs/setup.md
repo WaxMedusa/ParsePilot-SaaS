@@ -96,6 +96,33 @@ curl -s http://localhost:3000/ready | jq
 Sign in, upload a PDF, and watch the status transition through the documented stages. If AI extraction is not
 configured, the deterministic rules pipeline is used and a warning is recorded.
 
+## 6. AI extraction (optional, bring your own key)
+
+Without a provider key the deterministic rules pipeline runs alone and no document text leaves the deployment's
+own services. A workspace can add its own OpenAI-compatible provider in **Dashboard → Settings → AI extraction**;
+the key is encrypted with `SETTINGS_ENCRYPTION_KEY`, shown only as a last-four hint, and handed to the worker for
+that workspace's jobs only. `AI_API_KEY` remains the deployment-wide fallback for workspaces with no override.
+
+The rationale is privacy and control: the customer's key belongs to the customer's provider account, so document
+text travels to a provider they chose under their own agreement, they can revoke it without affecting anyone else,
+and the deployment never has to hold or resell model access on their behalf. Document text is still sent to that
+provider — a key does not remove the subprocessor; it determines whose account and terms it travels under.
+
+### Create a key in Google Cloud Console
+
+1. Open <https://console.cloud.google.com> and use the project picker to create (or select) a project, for example
+   `parsepilot-extraction`.
+2. **APIs & Services → Library**, search for **Generative Language API** and choose **Enable**.
+3. **APIs & Services → Credentials → Create credentials → API key**.
+4. Choose **Restrict key**, then limit **API restrictions** to the Generative Language API so the key cannot be used
+   against other Google services. Add a budget alert under **Billing** if the project is shared.
+5. Copy the key and paste it into the workspace settings with Provider URL
+   `https://generativelanguage.googleapis.com/v1beta/openai/` and a Gemini model identifier.
+
+The same key can be created at <https://aistudio.google.com/apikey>, which issues it against a Google Cloud project
+too. For OpenAI, create a project-scoped secret at <https://platform.openai.com/api-keys> and keep the default base
+URL `https://api.openai.com/v1`.
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |

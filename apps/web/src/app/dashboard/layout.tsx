@@ -1,4 +1,5 @@
 import '@fontsource-variable/manrope';
+import { redirect } from 'next/navigation';
 import { requireServerAuth } from '@/lib/auth/server';
 import { countDocumentsByStatus } from '@/lib/documents/repository';
 import { prisma } from '@/lib/prisma';
@@ -18,8 +19,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
   const [counts, profile] = await Promise.all([
     countDocumentsByStatus(auth.workspace.id),
-    prisma.user.findUnique({ where: { id: auth.user.id }, select: { avatarUpdatedAt: true } }),
+    prisma.user.findUnique({ where: { id: auth.user.id }, select: { avatarUpdatedAt: true, onboardedAt: true } }),
   ]);
+
+  // First login: finish the welcome wizard before the workspace opens. Accounts
+  // that predate onboarding were backfilled as complete by the migration.
+  if (!profile?.onboardedAt) redirect('/onboarding');
 
   return (
     <div className="app-scope">

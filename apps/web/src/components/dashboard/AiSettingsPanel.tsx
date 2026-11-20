@@ -76,8 +76,37 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
     }
   };
 
+  const benefits = [
+    {
+      index: '01',
+      title: 'Reads past the labels',
+      body: 'The model reads the whole page, so remit-to blocks, purchase-order numbers and line-item descriptions get values that label matching alone leaves blank.',
+    },
+    {
+      index: '02',
+      title: 'Rules still have the last word',
+      body: 'Totals, dates and currencies are normalised and checked, and uncertain documents still route to your review queue instead of being trusted.',
+    },
+    {
+      index: '03',
+      title: 'Your key, your provider account',
+      body: 'Document text goes to the provider you chose, under your own agreement. The key is encrypted at rest and only its last four characters are shown.',
+    },
+  ];
+
   return (
-    <div className={styles.split}>
+    <div className={styles.stack}>
+      <div className={styles.grid3}>
+        {benefits.map((benefit) => (
+          <div key={benefit.index} className={styles.benefit}>
+            <span className={styles.benefitIndex}>{benefit.index}</span>
+            <span className={styles.benefitTitle}>{benefit.title}</span>
+            <span className={styles.benefitBody}>{benefit.body}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className={styles.split}>
       <div className={styles.card}>
         <div className={styles.cardHead}>
           <span className={styles.cardTitle}>Provider</span>
@@ -100,6 +129,17 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
               <code>SETTINGS_ENCRYPTION_KEY</code> before keys can be saved.
             </div>
           ) : null}
+          {!view.configured && view.encryptionAvailable ? (
+            <div className={`${styles.notice} ${styles.noticeInfo}`} role="note" style={{ marginBottom: 12 }}>
+              <div>
+                <span className={styles.noticeTitle}>This workspace is rules-only.</span>{' '}
+                <span className={styles.noticeBody}>
+                  Add a provider key below and every new document also gets a model read. About two minutes, one key,
+                  and it stays yours.
+                </span>
+              </div>
+            </div>
+          ) : null}
           {!canManage ? (
             <div className={`${styles.notice} ${styles.noticeInfo}`} role="note" style={{ marginBottom: 12 }}>
               Only a workspace owner or admin can change these settings.
@@ -120,7 +160,10 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
               required
               disabled={!canManage}
             />
-            <span className={styles.hint}>OpenAI-compatible base URL. HTTPS only.</span>
+            <span className={styles.hint}>
+              OpenAI-compatible base URL. HTTPS only. For Gemini use{' '}
+              <code>https://generativelanguage.googleapis.com/v1beta/openai/</code>.
+            </span>
           </div>
 
           <div className={styles.formRow}>
@@ -154,7 +197,8 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
               disabled={!canManage}
             />
             <span className={styles.hint}>
-              Encrypted before storage and never shown again. Replacing it applies to the next extracted document.
+              Encrypted before storage and never shown again. Replacing it applies to the next extracted document.{' '}
+              <a href="#provider-key">How to create a key</a>
             </span>
           </div>
 
@@ -166,8 +210,11 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
                 onChange={(event) => setEnabled(event.target.checked)}
                 disabled={!canManage}
               />
-              Use the provider to review extractions for this workspace
+              Use the AI model to extract fields for new documents
             </label>
+            <span className={styles.hint}>
+              Untick to keep the key stored but run the rules alone for now.
+            </span>
           </div>
 
           <div className={styles.actions}>
@@ -202,6 +249,7 @@ export function AiSettingsPanel({ workspaceId, role, initial }: Props) {
             <li>Removing the key immediately returns this workspace to rules-only extraction.</li>
           </ul>
         </div>
+      </div>
       </div>
     </div>
   );
