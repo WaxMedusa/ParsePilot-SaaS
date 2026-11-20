@@ -10,6 +10,7 @@ const COLUMNS = [
       { href: '/#product', label: 'Overview' },
       { href: '/#pipeline', label: 'Processing pipeline' },
       { href: '/pricing', label: 'Pricing' },
+      { href: '/#faq', label: 'Questions' },
       { href: '/docs/api', label: 'API reference' },
     ],
   },
