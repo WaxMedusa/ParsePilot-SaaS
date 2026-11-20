@@ -3,6 +3,7 @@ import { requireWorkspaceAuth } from '@/lib/auth/server';
 import { listDocuments, countDocumentsByStatus } from '@/lib/documents/repository';
 import { listJobs, jobSummary } from '@/lib/jobs/service';
 import { getUsageSnapshot } from '@/lib/billing/usage';
+import { getAiSettingsView } from '@/lib/ai/settings';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { UploadPanel } from '@/components/dashboard/UploadPanel';
 import { DocumentsTable } from '@/components/dashboard/DocumentsTable';
@@ -17,7 +18,7 @@ export default async function DashboardOverviewPage() {
   const auth = await requireWorkspaceAuth();
   const workspaceId = auth.workspace.id;
 
-  const [usage, counts, recentDocuments, recentJobs] = await Promise.all([
+  const [usage, counts, recentDocuments, recentJobs, aiSettings] = await Promise.all([
     getUsageSnapshot(workspaceId),
     countDocumentsByStatus(workspaceId),
     listDocuments({
@@ -28,6 +29,7 @@ export default async function DashboardOverviewPage() {
       sortDirection: 'desc',
     }),
     listJobs({ workspaceId, skip: 0, take: 5, sortField: 'createdAt', sortDirection: 'desc' }),
+    getAiSettingsView(workspaceId),
   ]);
 
   const totalDocuments = Object.values(counts).reduce((sum, value) => sum + value, 0);
@@ -83,6 +85,41 @@ export default async function DashboardOverviewPage() {
           <span className={styles.statMeta}>{failed > 0 ? 'Retry from the job list' : 'No failures'}</span>
         </div>
       </div>
+
+      <section className={styles.aiBanner} aria-labelledby="ai-extraction-title">
+        <div className={styles.aiBannerText}>
+          <p className={styles.aiBannerEyebrow}>
+            {aiSettings.configured && aiSettings.enabled ? 'AI extraction · on' : 'AI extraction · off'}
+          </p>
+          <h2 className={styles.aiBannerTitle} id="ai-extraction-title">
+            {aiSettings.configured && aiSettings.enabled
+              ? 'Every new document gets a model read.'
+              : 'Give every document a model read.'}
+          </h2>
+          <p className={styles.aiBannerBody}>
+            {aiSettings.configured && aiSettings.enabled
+              ? `${aiSettings.model} reads each document before the rules run, so remit-to blocks, purchase-order numbers and line-item descriptions get values that label matching alone leaves blank. Totals, dates and currencies are still validated before anything reaches review.`
+              : 'The rules match known labels. A model reads the whole page and fills the fields those rules leave blank, then the same rules check totals, dates and currencies before anything reaches your review queue.'}
+          </p>
+          <div className={styles.actions}>
+            <ButtonLink href="/dashboard/settings/ai" size="sm">
+              {aiSettings.configured && aiSettings.enabled ? 'Manage provider' : 'Turn on AI extraction'}
+            </ButtonLink>
+            <ButtonLink href="/dashboard/settings/ai#provider-key" size="sm" variant="ghost">
+              {aiSettings.configured && aiSettings.enabled ? 'How your key is stored' : 'How to create a key'}
+            </ButtonLink>
+          </div>
+        </div>
+        <ul className={styles.aiBannerList}>
+          <li>Fills fields the label rules miss</li>
+          <li>Validated by the same rules either way</li>
+          <li>
+            {aiSettings.configured && aiSettings.keyHint
+              ? `Your key ${aiSettings.keyHint}, encrypted at rest`
+              : 'Your own key, encrypted at rest'}
+          </li>
+        </ul>
+      </section>
 
       <div className={styles.split}>
         <div className={styles.stack}>
