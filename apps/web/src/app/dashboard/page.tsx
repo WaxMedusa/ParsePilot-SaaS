@@ -98,7 +98,7 @@ export default async function DashboardOverviewPage() {
           </h2>
           <p className={styles.aiBannerBody}>
             {aiSettings.configured && aiSettings.enabled
-              ? `${aiSettings.model} reads each document before the rules run, so remit-to blocks, purchase-order numbers and line-item descriptions get values that label matching alone leaves blank. Totals, dates and currencies are still validated before anything reaches review.`
+              ? 'Whichever model you connect reads each document before the rules run, so remit-to blocks, purchase-order numbers and line-item descriptions get values that label matching alone leaves blank. Totals, dates and currencies are still validated before anything reaches review.'
               : 'The rules match known labels. A model reads the whole page and fills the fields those rules leave blank, then the same rules check totals, dates and currencies before anything reaches your review queue.'}
           </p>
           <div className={styles.actions}>
