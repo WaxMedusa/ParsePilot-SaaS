@@ -144,3 +144,52 @@
     gap: 5px;
   }
 }
+
+/* Boxed surface pass */
+.section {
+  padding: 16px 18px 18px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.head {
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.kicker {
+  color: var(--color-primary);
+  font-size: 8px;
+}
+
+.title {
+  font-size: 12.5px;
+  font-weight: 560;
+}
+
+.frame {
+  margin-top: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-muted);
+}
+
+.pdf,
+.image {
+  background: var(--app-surface-muted);
+}
+
+.foot {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-border);
+  font-size: 8px;
+}
+
+@media (max-width: 620px) {
+  .section {
+    padding: 14px;
+  }
+}

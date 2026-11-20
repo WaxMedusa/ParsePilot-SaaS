@@ -1,3 +1,4 @@
+import '@fontsource-variable/manrope';
 import { requireServerAuth } from '@/lib/auth/server';
 import { countDocumentsByStatus } from '@/lib/documents/repository';
 import { prisma } from '@/lib/prisma';
@@ -9,7 +10,11 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const auth = await requireServerAuth();
   if (!auth.workspace) {
-    return <div style={{ minHeight: '100vh', background: 'var(--color-background)' }}>{children}</div>;
+    return (
+      <div className="app-scope" style={{ minHeight: '100vh', background: 'var(--app-ground)' }}>
+        {children}
+      </div>
+    );
   }
   const [counts, profile] = await Promise.all([
     countDocumentsByStatus(auth.workspace.id),
@@ -17,7 +22,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ]);
 
   return (
-    <DashboardShell
+    <div className="app-scope">
+      <DashboardShell
       user={{
         name: auth.user.name,
         email: auth.user.email,
@@ -38,8 +44,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         role: workspace.role,
       }))}
       reviewCount={counts.needs_review ?? 0}
-    >
-      {children}
-    </DashboardShell>
+      >
+        {children}
+      </DashboardShell>
+    </div>
   );
 }

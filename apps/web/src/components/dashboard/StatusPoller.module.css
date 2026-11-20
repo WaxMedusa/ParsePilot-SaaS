@@ -54,3 +54,16 @@
     margin-left: 14px;
   }
 }
+
+/* Boxed surface pass */
+.strip {
+  padding: 11px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-muted);
+  font-size: 11px;
+}
+
+.meta {
+  font-size: 8.5px;
+}
