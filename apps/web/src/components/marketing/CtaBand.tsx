@@ -8,7 +8,7 @@ export function CtaBand() {
     <section className={styles.section}>
       <div className={`container ${styles.inner}`}>
         <div className={styles.meta}>
-          <span>09 / Begin</span>
+          <span>10 / Begin</span>
           <span>One workspace / 100 free pages</span>
         </div>
 

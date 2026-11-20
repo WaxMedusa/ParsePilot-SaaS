@@ -7,6 +7,7 @@ import { UseCases } from '@/components/marketing/UseCases';
 import { ProofDrift } from '@/components/marketing/ProofDrift';
 import { TrustSection } from '@/components/marketing/TrustSection';
 import { PricingTeaser } from '@/components/marketing/PricingTeaser';
+import { Faq } from '@/components/marketing/Faq';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { listPublicPlans } from '@/lib/billing/plans';
 
@@ -25,6 +26,7 @@ export default async function LandingPage() {
       <ProofDrift />
       <TrustSection />
       <PricingTeaser plans={plans} />
+      <Faq />
       <CtaBand />
     </>
   );
