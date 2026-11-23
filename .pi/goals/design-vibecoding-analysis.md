@@ -1,0 +1,90 @@
+# Objective
+Analyze parsepilotapp.vercel.app for its 10 biggest design failures that make it seem "vibecoded" (generic, templated, lacking unique brand personality).
+
+# Acceptance criteria
+1. Identify 10 distinct design issues that create a "vibecoded" impression
+2. Provide specific examples with code/CSS class evidence
+3. Explain the root cause of each issue
+4. Provide actionable recommendations for each issue
+
+# Evidence
+- Completed analysis of 10 design failures in parsepilotapp.vercel.app
+- Analyzed deployed HTML output with auto-generated class names
+- Reviewed globals.css design tokens and component CSS modules
+- Identified template-driven patterns in typography, UI, and copy
+- Evidence from: Hero, ProductPreview, Statement, TrustSection, UseCases, ProofDrift, SiteNav, Button, Badge components
+
+# All 10 Vibecoding Failures
+
+## 1. Auto-Generated CSS Class Names in Deployed Output
+**Evidence**: Deployed HTML shows `class="SiteNav_links__sP1xv"`, `class="Hero_headline__f7PqB"`, `class="ProductPreview_composition__l_T5V"`
+**Root Cause**: CSS Modules auto-hashing produces meaningless class names that signal "component library" not "crafted brand"
+**Fix**: Disable hashing for production (`generateScopedName: "[local]"` in CSS Modules config) or use meaningful BEM names in source
+
+## 2. Typography Feels Like a Theme Selector Dump
+**Evidence**: Three font families (`Instrument Sans Variable`, `Instrument Serif`, `JetBrains Mono`) mixed arbitrarily; inline `<em className="serif">trust.</em>` in Hero headline
+**Root Cause**: Treating font selection as "pick nice fonts" rather than building a deliberate type system with defined roles
+**Fix**: Define semantic type roles: `--font-display` (headlines), `--font-body` (paragraphs), `--font-data` (numbers/codes), `--font-ui` (buttons/labels). Remove inline serif class, use utility classes
+
+## 3. Copy-Paste UI Components from Standard Libraries
+**Evidence**: Button component has `primary|secondary|ghost|danger|inverse` variants with `sm|md|lg` sizes — identical to Shadcn/UI, Radix, Chakra. Badge has `neutral|primary|success|warning|danger|info` tones — straight from design system templates.
+**Root Cause**: Adopting generic component APIs without customizing for brand personality
+**Fix**: Rename variants to brand-specific: `primary` → `cta`, `secondary` → `outline`, `inverse` → `brand-on-cream`, `ghost` → `subtle`. Add unique variants like `brand-stroke` or `brand-fill` that don't exist in templates
+
+## 4. Animation Delays Feel Like Default Settings
+**Evidence**: Hardcoded stagger delays: `rise-in-delay-1` (80ms), `rise-in-delay-2` (160ms), `rise-in-delay-3` (240ms). Reveal component uses `delay={index * 60}` and `delay={index * 70}` across multiple sections.
+**Root Cause**: Using CSS animation utilities as-is without choreographing timing to content priority
+**Fix**: Calculate delays from content hierarchy: Hero headline (0ms) → supporting copy (120ms) → CTA (180ms) → decorative proof items (240ms). Make each delay serve narrative flow, not mechanical stagger
+
+## 5. Developer Commentary in User-Facing Copy
+**Evidence**: Hero fine print: "No credit card. Private storage. Delete documents at any time." TrustSection: "No badges. No unearned claims. Just the controls we can point to." ProductPreview: "Live pipeline" badge, "v03 · worker eu-west-1" dev metadata in UI.
+**Root Cause**: Engineers writing product copy that explains features rather than selling outcomes
+**Fix**: Rewrite as emotional hooks first: "Start in seconds. Keep your data yours. No card until you're ready." / "Your documents. Your rules. We just process them."
+
+## 6. "Live Pipeline" Developer Tool Aesthetic in Marketing Demo
+**Evidence**: ProductPreview shows "Workspace / documents / INV-8842", "PDF · 02", "Extraction / v03", "v03 · worker eu-west-1", "schema v7", "1,204 characters" — internal dev terminology exposed as marketing visual
+**Root Cause**: Reusing actual dashboard UI as marketing illustration without translation for audience
+**Fix**: Create a dedicated marketing illustration that uses customer language: "Invoice INV-8842" not "Workspace/documents/INV-8842", "2-page PDF" not "PDF · 02", hide version/worker metadata, show business outcomes
+
+## 7. Generic Grid Layouts Without Visual Hierarchy
+**Evidence**: UseCases uses 12-column grid (`grid-template-columns: repeat(12, minmax(0, 1fr))`) but applies it mechanically. Statement uses same 12-col grid. ProofDrift uses 3-column drift animation. All sections feel like "layout exercise" not "visual storytelling."
+**Root Cause**: Applying layout systems uniformly instead of designing each section's unique visual rhythm
+**Fix**: Break the grid intentionally. Hero: asymmetric 45/55 split with vertical rule. Statement: 3-col sidebar + 9-col content with hairline border. UseCases: intro column (30%) + cases (70%) with distinct visual treatment. Each section should have its own layout logic
+
+## 8. Status Indicators Use Generic Color-Coded Dots
+**Evidence**: ProofDrift `.rowState` uses 4px circles with `data-state='ok|review|flag|muted'` mapping to success/warning/danger/faint. TrustSection uses same pattern. ProductPreview uses confidence meter bars (`<i style={{width: '97%'}}>`).
+**Root Cause**: Using standard dashboard status patterns in marketing context without brand differentiation
+**Fix**: Design unique status visualization: "review" = accent underline animation, "flag" = subtle pulse, "ok" = checkmark that draws in. Confidence → radial progress ring with brand accent, not green bar
+
+## 9. Over-Reliance on Monospace for "Technical Credibility"
+**Evidence**: Kickers use `font-family: var(--font-mono)`, field labels use mono, confidence values use mono, pipeline steps use mono, proof items use mono, UseCases meta/caseIndex use mono, badge uses mono. Mono appears 15+ times across components.
+**Root Cause**: Treating monospace as "trust signal" rather than functional tool — overuse dilutes impact and reads as performative technicality
+**Fix**: Reserve monospace for actual data: numbers, codes, IDs, API responses. Use sans-serif for labels, categories, UI text. Create `--font-label` token distinct from `--font-data`
+
+## 10. No Unique Visual Signature / Brand Pattern
+**Evidence**: The only brand-specific elements are: the logo, the burnt orange accent (`#cc5500`), and the "serif" class for emphasis. Everything else — grid layouts, reveal animations, card styling, button variants, badge system, status dots, confidence bars — exists in 1000 other SaaS sites.
+**Root Cause**: Building from design tokens up instead of from brand identity down
+**Fix**: Invent 2-3 signature patterns unique to ParsePilot:
+- "Source trace" — a subtle dotted line connecting extracted value to document location (visible on hover)
+- "Version ribbon" — a folded corner on any corrected field showing version number
+- "Confidence whisper" — progressive disclosure: show confidence only on hover, not as persistent bars
+- "Paper texture" — subtle grain on cards/paper surfaces that reinforces "document intelligence" brand
+
+# Recommendations Summary
+
+| Priority | Area | Action |
+|----------|------|--------|
+| P0 | Class names | Disable CSS Modules hashing; use semantic names |
+| P0 | Typography | Define 4 semantic type roles; remove inline serif |
+| P0 | Copy | Rewrite all marketing copy from user-outcome perspective |
+| P1 | Button/Badge | Rename variants to brand-specific; add 2 unique variants |
+| P1 | Animations | Choreograph delays to narrative, not index |
+| P1 | Demo UI | Build dedicated marketing illustration (not dashboard screenshot) |
+| P2 | Layouts | Give each section unique grid logic; break the 12-col habit |
+| P2 | Status UI | Replace dots/bars with brand-specific patterns |
+| P2 | Monospace | Restrict to data only; create --font-label token |
+| P3 | Brand patterns | Invent 2-3 signature interactions unique to ParsePilot |
+
+# Status
+✅ Analysis complete — 10 vibecoding failures identified with evidence and fixes
+✅ Ready for implementation phase
