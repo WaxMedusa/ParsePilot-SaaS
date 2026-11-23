@@ -42,13 +42,8 @@ export function noContent(options?: { requestId?: string; headers?: Record<strin
   });
 }
 
-type ErrorBody = {
-  error: { code: string; message: string; details?: unknown };
-  requestId: string;
-};
-
 /** Converts any thrown value into a safe, structured API error response. */
-export function errorResponse(error: unknown, requestId: string, extraHeaders?: Record<string, string>): NextResponse<ErrorBody> {
+export function errorResponse(error: unknown, requestId: string, extraHeaders?: Record<string, string>): NextResponse {
   let status = 500;
   let code = 'internal_error';
   let message = 'Something went wrong. Please try again.';
@@ -71,24 +66,18 @@ export function errorResponse(error: unknown, requestId: string, extraHeaders?: 
     details = error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message }));
   } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
-      status = 409;
-      code = 'conflict';
-      message = 'A record with these details already exists';
+      status = 409; code = 'conflict'; message = 'A record with these details already exists';
     } else if (error.code === 'P2025') {
-      status = 404;
-      code = 'not_found';
-      message = 'Resource not found';
+      status = 404; code = 'not_found'; message = 'Resource not found';
     } else {
-      status = 500;
-      code = 'internal_error';
+      status = 500; code = 'internal_error';
     }
   } else if (error instanceof Error && /timeout|timed out/i.test(error.message)) {
-    status = 504;
-    code = 'service_unavailable';
-    message = 'The request timed out. Please try again.';
+    status = 504; code = 'service_unavailable'; message = 'The request timed out. Please try again.';
   }
 
-  if (status >= 500) {
+  const shouldLog = status >= 500;
+  if (shouldLog) {
     logger.error('api_error', {
       requestId,
       code,
@@ -100,11 +89,8 @@ export function errorResponse(error: unknown, requestId: string, extraHeaders?: 
     logger.info('api_rejected', { requestId, code, status });
   }
 
-  return NextResponse.json<ErrorBody>(
+  return NextResponse.json(
     { error: { code, message, ...(details !== undefined ? { details } : {}) }, requestId },
-    {
-      status,
-      headers: { ...BASE_HEADERS, 'x-request-id': requestId, ...headers },
-    },
+    { status, headers: { ...BASE_HEADERS, 'x-request-id': requestId, ...headers, ...extraHeaders } },
   );
 }

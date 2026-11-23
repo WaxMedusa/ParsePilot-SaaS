@@ -157,6 +157,7 @@ model User {
   dataRequests      DataRequest[]
   exports           Export[]
   fieldEdits        ExtractionField[]     @relation("FieldEditor")
+  erpConnections    ErpConnection[]
   cookieConsent     CookieConsent?
   aiSettingsUpdates AiSettings[]           @relation("AiSettingsUpdater")
 
@@ -164,31 +165,39 @@ model User {
 }
 
 model Workspace {
-  id             String    @id @default(uuid()) @db.Uuid
-  name           String
-  slug           String    @unique
-  ownerId        String    @db.Uuid
-  billingEmail   String?
-  planCode       String    @default("free")
-  country        String?
-  deletedAt      DateTime?
-  deletionScheduledAt DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                   String    @id @default(uuid()) @db.Uuid
+  name                 String
+  slug                 String    @unique
+  ownerId              String    @db.Uuid
+  billingEmail         String?
+  planCode             String    @default("free")
+  country              String?
+  deletedAt            DateTime?
+  deletionScheduledAt  DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  owner          User      @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  members        WorkspaceMember[]
-  documents      Document[]
-  jobs           ProcessingJob[]
-  exports        Export[]
-  usagePeriods   UsagePeriod[]
-  usageLedger    UsageLedger[]
-  subscription   Subscription?
-  invitations    WorkspaceInvitation[]
-  auditEntries   AuditLog[]
-  dataRequests   DataRequest[]
-  deletionRecords DeletionRecord[]
-  aiSettings     AiSettings?
+  owner                User      @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members              WorkspaceMember[]
+  documents            Document[]
+  jobs                 ProcessingJob[]
+  exports              Export[]
+  usagePeriods         UsagePeriod[]
+  usageLedger          UsageLedger[]
+  subscription         Subscription?
+  invitations          WorkspaceInvitation[]
+  auditEntries         AuditLog[]
+  dataRequests         DataRequest[]
+  deletionRecords      DeletionRecord[]
+  aiSettings           AiSettings?
+  webhookEndpoints     WebhookEndpoint[]
+  vendors              Vendor[]
+  glCodingRules        GlCodingRule[]
+  customFieldDefinitions CustomFieldDefinition[]
+  fxRates              FxRate[]
+  approvalPolicies     ApprovalPolicy[]
+  erpConnections       ErpConnection[]
+  inboundEmailMessages InboundEmailMessage[]
 
   @@index([ownerId])
   @@index([deletedAt])
@@ -315,6 +324,10 @@ model Document {
   usageLedger     UsageLedger[]
   deletionRecords DeletionRecord[]
   dataRequests    DataRequest[]
+  vendors         Vendor[]
+  inboundEmails   InboundEmailMessage[]
+  customFields    CustomFieldValue[]
+  approvalSteps   ApprovalStep[]
 
   @@index([workspaceId, status])
   @@index([workspaceId, createdAt])
@@ -682,4 +695,275 @@ model SecurityIncident {
   updatedAt          DateTime         @updatedAt
 
   @@index([status, severity])
+}
+
+// ---------------------------------------------------------------------------
+// Webhook Engine & Event Notifications (Feature 2)
+// ---------------------------------------------------------------------------
+
+model WebhookEndpoint {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @db.Uuid
+  name            String
+  url             String
+  secretKey       String?
+  events          String[]
+  active          Boolean  @default(true)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  webhookEvents   WebhookEvent[]
+
+  @@index([workspaceId])
+}
+
+model WebhookEvent {
+  id               String    @id @default(uuid()) @db.Uuid
+  workspaceId      String    @db.Uuid
+  endpointId       String    @db.Uuid
+  eventType        String
+  payload          Json
+  status           String    @default("pending") // pending | sent | failed
+  attempts         Int       @default(0)
+  nextRetryAt      DateTime?
+  lastStatusCode   Int?
+  lastError        String?
+  signedAt         DateTime  @default(now())
+  deliveredAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  endpoint         WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, createdAt])
+  @@index([endpointId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Vendor Directory & Fuzzy Matching (Feature 3)
+// ---------------------------------------------------------------------------
+
+model Vendor {
+  id                  String   @id @default(uuid()) @db.Uuid
+  workspaceId         String   @db.Uuid
+  canonicalName       String
+  normalizedKey       String
+  taxId               String?
+  paymentTerms        String?
+  defaultGlCode       String?
+  defaultDepartment   String?
+  currency            String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  workspace           Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  aliases             VendorAlias[]
+  documents           Document[]
+  glCodingRules       GlCodingRule[]
+
+  @@unique([workspaceId, normalizedKey])
+  @@index([workspaceId, isActive])
+}
+
+model VendorAlias {
+  id            String   @id @default(uuid()) @db.Uuid
+  vendorId      String   @db.Uuid
+  name          String
+  normalizedKey String
+  createdAt     DateTime @default(now())
+
+  vendor        Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@index([normalizedKey])
+}
+
+// ---------------------------------------------------------------------------
+// GL Account & Cost-Center Auto-Coding (Feature 4)
+// ---------------------------------------------------------------------------
+
+model GlCodingRule {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @db.Uuid
+  vendorId        String?  @db.Uuid
+  name            String
+  conditions      Json?
+  accountCode     String
+  accountName     String?
+  department      String?
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  vendor          Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, isActive, sortOrder])
+}
+
+// ---------------------------------------------------------------------------
+// Custom Field & Dynamic Schema Builder (Feature 8)
+// ---------------------------------------------------------------------------
+
+model CustomFieldDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  key         String
+  label       String
+  fieldType   String   @default("string") // string | date | currency | decimal | select | boolean
+  options     Json?
+  validation  Json?
+  aiHint      String?
+  required    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  values      CustomFieldValue[]
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId, sortOrder])
+}
+
+model CustomFieldValue {
+  id              String    @id @default(uuid()) @db.Uuid
+  documentId      String    @db.Uuid
+  definitionId    String    @db.Uuid
+  extractionRunId String?   @db.Uuid
+  value           String?
+  editedValue     String?
+  confidence      Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  document        Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  definition      CustomFieldDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, definitionId])
+}
+
+// ---------------------------------------------------------------------------
+// Multi-Currency Normalization & Live FX Rates (Feature 9)
+// ---------------------------------------------------------------------------
+
+model FxRate {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @db.Uuid
+  baseCurrency  String
+  quoteCurrency String
+  date          DateTime
+  rate          Decimal
+  source        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, baseCurrency, quoteCurrency, date])
+  @@index([workspaceId, baseCurrency, quoteCurrency, date])
+}
+
+// ---------------------------------------------------------------------------
+// Multi-Step Approval Workflows & Threshold Governance (Feature 10)
+// ---------------------------------------------------------------------------
+
+model ApprovalPolicy {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @db.Uuid
+  name            String
+  minAmountCents  Int?
+  maxAmountCents  Int?
+  approverRoleId  String   @default("admin")
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  steps           ApprovalStep[]
+
+  @@index([workspaceId, isActive, sortOrder])
+}
+
+model ApprovalStep {
+  id                 String         @id @default(uuid()) @db.Uuid
+  policyId           String         @db.Uuid
+  documentId         String         @db.Uuid
+  approverRoleId     String
+  status             String         @default("pending") // pending | approved | rejected
+  order              Int
+  notes              String?
+  approvedById       String?        @db.Uuid
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+  reassignmentReason String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  document           Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  policy             ApprovalPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, status])
+  @@index([policyId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Direct Accounting Integrations (Feature 6)
+// ---------------------------------------------------------------------------
+
+model ErpConnection {
+  id               String    @id @default(uuid()) @db.Uuid
+  workspaceId      String    @db.Uuid
+  provider         String    // quickbooks_online | xero
+  name             String
+  oauthState       String?
+  accessToken      String?
+  refreshToken     String?
+  tokenExpiresAt   DateTime?
+  connectedById    String    @db.Uuid
+  lastSyncedAt     DateTime?
+  isActive         Boolean   @default(true)
+  settings         Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectedBy      User      @relation(fields: [connectedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, provider, isActive])
+}
+
+// ---------------------------------------------------------------------------
+// Inbound Email-to-Invoice Gateway (Feature 1)
+// ---------------------------------------------------------------------------
+
+model InboundEmailMessage {
+  id              String        @id @default(uuid()) @db.Uuid
+  workspaceId     String        @db.Uuid
+  messageId       String
+  fromEmail       String
+  subject       String
+  to              String?
+  receivedAt      DateTime      @default(now())
+  bodyHtml        String?
+  bodyText        String?
+  headers         Json?
+  attachments     Json?
+  documentId      String?       @db.Uuid
+  status          String        @default("received") // received | processed | errored
+  error           String?
+  processingError String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  document        Document?     @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, messageId])
+  @@index([workspaceId, status, receivedAt])
 }

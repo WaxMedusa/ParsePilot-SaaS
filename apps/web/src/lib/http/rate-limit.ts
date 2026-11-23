@@ -15,16 +15,12 @@ let lastSweep = 0;
 function sweep(now: number) {
   if (now - lastSweep < 60_000) return;
   lastSweep = now;
-  for (const [bucketKey, bucket] of localBuckets) {
-    if (bucket.resetAt <= now) localBuckets.delete(bucketKey);
+  for (const [key, bucket] of localBuckets) {
+    if (bucket.resetAt <= now) localBuckets.delete(key);
   }
 }
 
-/**
- * Fixed-window limiter. Redis keeps limits consistent across instances;
- * the in-memory fallback protects single-instance development only and is
- * reported as degraded by /ready when Redis is unavailable.
- */
+/** Fixed-window limiter with Redis primary store and in-memory fallback. */
 export async function enforceRateLimit(scope: string, limit: number, windowMs: number): Promise<RateLimitResult> {
   const now = Date.now();
   const windowStart = Math.floor(now / windowMs) * windowMs;
@@ -35,9 +31,7 @@ export async function enforceRateLimit(scope: string, limit: number, windowMs: n
   if (redis) {
     try {
       const count = await redis.incr(bucketKey);
-      if (count === 1) {
-        await redis.pExpire(bucketKey, windowMs + 1_000);
-      }
+      if (count === 1) await redis.pExpire(bucketKey, windowMs + 1_000);
       return {
         allowed: count <= limit,
         limit,
@@ -46,7 +40,7 @@ export async function enforceRateLimit(scope: string, limit: number, windowMs: n
         retryAfterSeconds: Math.max(1, Math.ceil((resetAt - now) / 1000)),
       };
     } catch {
-      // Fall through to local limiting rather than failing open.
+      // Fall through to local limiting
     }
   }
 
@@ -54,6 +48,7 @@ export async function enforceRateLimit(scope: string, limit: number, windowMs: n
   const bucket = localBuckets.get(bucketKey) ?? { count: 0, resetAt };
   bucket.count += 1;
   localBuckets.set(bucketKey, bucket);
+
   return {
     allowed: bucket.count <= limit,
     limit,

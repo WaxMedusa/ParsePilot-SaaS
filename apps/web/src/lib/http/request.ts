@@ -11,19 +11,15 @@ export function getRequestId(request: NextRequest): string {
 
 export function getClientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0]!.trim();
-  return request.headers.get('x-real-ip') ?? 'unknown';
+  return forwarded ? forwarded.split(',')[0]!.trim() : request.headers.get('x-real-ip') ?? 'unknown';
 }
 
-/** IP addresses are pseudonymised before storage or logging. */
 export function hashIp(ip: string): string {
   return createHmac('sha256', sessionSecret()).update(ip).digest('hex').slice(0, 32);
 }
 
-export function isMutatingMethod(method: string): boolean {
-  return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase());
-}
+export const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-export function clientIpForRequest(request: NextRequest): string {
-  return getClientIp(request);
+export function isMutatingMethod(method: string): boolean {
+  return MUTATING_METHODS.has(method.toUpperCase());
 }

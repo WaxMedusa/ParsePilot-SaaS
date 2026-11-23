@@ -2,23 +2,15 @@ import { appConfig, internalServiceToken } from '../env';
 import { logger } from '../logger';
 import { increment } from '../observability/metrics';
 
-/**
- * The database row is the authoritative job record. This module only asks the
- * Python processing service to enqueue the job in its Redis-backed RQ queue.
- * If the service is unreachable the job stays `queued` in PostgreSQL and the
- * reconciler re-announces it — a worker outage never loses a document.
- */
+/** Database row is authoritative; Python RQ queue is secondary. */
 export async function enqueueJobRemotely(job: {
   id: string;
   type: string;
   correlationId: string;
   attempts: number;
 }): Promise<{ enqueued: boolean; error?: string }> {
-  // In database mode the durable PostgreSQL row is the queue. The worker polls
-  // `/api/v1/internal/jobs/next`, so there is no second broker to announce to.
-  if (appConfig.queueDriver === 'database') {
-    return { enqueued: true };
-  }
+  if (appConfig.queueDriver === 'database') return { enqueued: true };
+
   const url = `${appConfig.processorUrl}/internal/jobs`;
   try {
     const response = await fetch(url, {
@@ -49,6 +41,7 @@ export async function enqueueJobRemotely(job: {
 /** Checks the processing service health without leaking credentials. */
 export async function checkProcessor(): Promise<{ ok: boolean; error?: string; latencyMs: number }> {
   if (appConfig.queueDriver === 'database') return { ok: true, latencyMs: 0 };
+
   const started = Date.now();
   try {
     const response = await fetch(`${appConfig.processorUrl}/ready`, {

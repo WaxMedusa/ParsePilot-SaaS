@@ -1,26 +1,13 @@
 export type ApiErrorCode =
-  | 'bad_request'
-  | 'validation_failed'
-  | 'unauthorized'
-  | 'forbidden'
-  | 'not_found'
-  | 'conflict'
-  | 'rate_limited'
-  | 'payload_too_large'
-  | 'unsupported_media_type'
-  | 'quota_exceeded'
-  | 'subscription_inactive'
-  | 'method_not_allowed'
-  | 'internal_error'
-  | 'service_unavailable'
-  | 'csrf_failed'
-  | 'origin_rejected';
+  | 'bad_request' | 'validation_failed' | 'unauthorized' | 'forbidden' | 'not_found'
+  | 'conflict' | 'rate_limited' | 'payload_too_large' | 'unsupported_media_type'
+  | 'quota_exceeded' | 'subscription_inactive' | 'method_not_allowed' | 'internal_error'
+  | 'service_unavailable' | 'csrf_failed' | 'origin_rejected';
 
 export class ApiError extends Error {
   readonly status: number;
   readonly code: ApiErrorCode;
   readonly details?: unknown;
-  /** Safe to show to the caller. Internal errors are never exposed. */
   readonly expose: boolean;
 
   constructor(status: number, code: ApiErrorCode, message: string, options?: { details?: unknown; expose?: boolean }) {

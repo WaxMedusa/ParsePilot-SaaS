@@ -10,33 +10,28 @@ export function generateCsrfToken(): string {
 export function constantTimeEquals(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length || bufA.length === 0) return false;
-  return timingSafeEqual(bufA, bufB);
+  return bufA.length === bufB.length && bufA.length > 0 && timingSafeEqual(bufA, bufB);
 }
 
-/**
- * Rejects cross-site mutations. Cookie-authenticated requests must carry a
- * matching double-submit token and an Origin that matches the request host.
- * Bearer-token requests (server-to-server clients) are not cookie-driven and
- * therefore not subject to CSRF.
- */
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+function getOriginHost(origin: string | null): string | null {
+  try {
+    return origin ? new URL(origin).host : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Rejects cross-site mutations for cookie-authenticated requests. */
 export function assertCsrf(request: NextRequest, options: { usesCookieAuth: boolean }): void {
-  const method = request.method.toUpperCase();
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return;
+  if (!MUTATING_METHODS.has(request.method.toUpperCase())) return;
   if (!options.usesCookieAuth) return;
 
-  const origin = request.headers.get('origin');
-  if (origin) {
-    let originHost: string | null = null;
-    try {
-      originHost = new URL(origin).host;
-    } catch {
-      originHost = null;
-    }
-    const requestHost = request.headers.get('host');
-    if (!originHost || !requestHost || originHost !== requestHost) {
-      throw new ApiError(403, 'origin_rejected', 'Cross-origin request rejected');
-    }
+  const originHost = getOriginHost(request.headers.get('origin'));
+  const requestHost = request.headers.get('host');
+  if (originHost && requestHost && originHost !== requestHost) {
+    throw new ApiError(403, 'origin_rejected', 'Cross-origin request rejected');
   }
 
   const headerToken = request.headers.get('x-csrf-token');
@@ -46,17 +41,12 @@ export function assertCsrf(request: NextRequest, options: { usesCookieAuth: bool
   }
 }
 
-/** Same-origin check used for non-cookie mutations (internal service calls excluded). */
+/** Same-origin check for non-cookie mutations (excludes internal service calls). */
 export function assertSameOrigin(request: NextRequest): void {
-  const origin = request.headers.get('origin');
-  if (!origin) return;
-  let originHost: string | null = null;
-  try {
-    originHost = new URL(origin).host;
-  } catch {
-    originHost = null;
-  }
-  if (!originHost || originHost !== request.headers.get('host')) {
+  const originHost = getOriginHost(request.headers.get('origin'));
+  if (!originHost) return;
+  const requestHost = request.headers.get('host');
+  if (originHost !== requestHost) {
     throw new ApiError(403, 'origin_rejected', 'Cross-origin request rejected');
   }
 }

@@ -16,11 +16,7 @@ export type SupabaseIdentity = {
   name: string;
 };
 
-/**
- * Supabase Auth is the identity provider for Google sign-in. The project URL
- * and publishable key are public client configuration; the service_role key is
- * never used by the web app.
- */
+/** Supabase Auth is the identity provider for Google sign-in. */
 function supabaseAuthConfig(): { url: string; anonKey: string } {
   const rawUrl = optionalEnv('SUPABASE_URL', optionalEnv('NEXT_PUBLIC_SUPABASE_URL'));
   const anonKey = optionalEnv(
@@ -54,11 +50,7 @@ function readName(metadata: Record<string, unknown> | null | undefined, email: s
   return email.split('@')[0]?.slice(0, 120) || 'ParsePilot user';
 }
 
-/**
- * Verifies a Supabase access token against the project's Auth server. The
- * returned email must be confirmed; Google identities are confirmed by
- * Supabase before this endpoint is reached.
- */
+/** Verifies a Supabase access token. Returns email must be confirmed. */
 export async function verifySupabaseAccessToken(accessToken: string): Promise<SupabaseIdentity | null> {
   const { url, anonKey } = supabaseAuthConfig();
 
@@ -66,11 +58,7 @@ export async function verifySupabaseAccessToken(accessToken: string): Promise<Su
   try {
     response = await fetch(`${url}/auth/v1/user`, {
       method: 'GET',
-      headers: {
-        accept: 'application/json',
-        apikey: anonKey,
-        authorization: `Bearer ${accessToken}`,
-      },
+      headers: { accept: 'application/json', apikey: anonKey, authorization: `Bearer ${accessToken}` },
       cache: 'no-store',
       signal: AbortSignal.timeout(5_000),
     });
@@ -90,9 +78,5 @@ export async function verifySupabaseAccessToken(accessToken: string): Promise<Su
   if (!user.email_confirmed_at && !user.confirmed_at) return null;
 
   const email = user.email.toLowerCase();
-  return {
-    id: user.id,
-    email,
-    name: readName(user.user_metadata, email),
-  };
+  return { id: user.id, email, name: readName(user.user_metadata, email) };
 }

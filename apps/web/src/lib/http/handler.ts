@@ -28,12 +28,9 @@ export type ApiContext = {
 };
 
 export type ApiOptions = {
-  /** Defaults to required. */
   auth?: 'required' | 'optional' | 'none';
-  /** Resolve and authorize the workspace named by x-workspace-id / workspaceId. */
   workspace?: { required?: boolean; minRole?: WorkspaceRole } | false;
   rateLimit?: { limit: number; windowMs: number; per?: 'ip' | 'user' };
-  /** Require CSRF protection for cookie-authenticated mutations (default true). */
   csrf?: boolean;
 };
 
@@ -43,13 +40,20 @@ type NextRouteContext = { params: Promise<Record<string, string | string[] | und
 
 const WORKSPACE_HEADER = 'x-workspace-id';
 
+function normalizeParams(rawParams: Record<string, string | string[] | undefined> | null | undefined): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(rawParams ?? {})) {
+    params[key] = Array.isArray(value) ? value[0] ?? '' : value ?? '';
+  }
+  return params;
+}
+
 export function withApi(handler: ApiHandler, options: ApiOptions = {}) {
   const authMode = options.auth ?? 'required';
   const workspaceOption = options.workspace;
   const requiresWorkspace = workspaceOption !== undefined && workspaceOption !== false;
   const workspaceRequired = workspaceOption === undefined || (workspaceOption !== false && workspaceOption.required !== false);
-  const minimumRole: WorkspaceRole =
-    workspaceOption ? workspaceOption.minRole ?? 'viewer' : 'viewer';
+  const minimumRole: WorkspaceRole = workspaceOption ? workspaceOption.minRole ?? 'viewer' : 'viewer';
 
   return async (request: NextRequest, routeContext: NextRouteContext): Promise<Response> => {
     const startedAt = Date.now();
@@ -57,11 +61,7 @@ export function withApi(handler: ApiHandler, options: ApiOptions = {}) {
     const ipHash = hashIp(getClientIp(request));
 
     try {
-      const rawParams = routeContext?.params ? await routeContext.params : {};
-      const params: Record<string, string> = {};
-      for (const [key, value] of Object.entries(rawParams)) {
-        params[key] = Array.isArray(value) ? value[0] ?? '' : value ?? '';
-      }
+      const params = normalizeParams(await routeContext?.params);
 
       // --- Authentication -------------------------------------------------
       const token = await readSessionToken(request);
@@ -102,7 +102,6 @@ export function withApi(handler: ApiHandler, options: ApiOptions = {}) {
             try {
               workspace = await resolveWorkspaceAccess(auth.user.id, cookieWorkspace, minimumRole);
             } catch {
-              // A stale or revoked workspace selection must not break the API.
               workspace = await resolveDefaultWorkspace(auth.user.id);
             }
           } else {
@@ -115,7 +114,6 @@ export function withApi(handler: ApiHandler, options: ApiOptions = {}) {
       }
 
       const response = await handler(request, { requestId, ipHash, auth, workspace, params });
-
       response.headers.set('x-request-id', requestId);
       if (auth) response.headers.set('Cache-Control', 'no-store, max-age=0');
       return response;
@@ -135,10 +133,7 @@ export function withApi(handler: ApiHandler, options: ApiOptions = {}) {
   };
 }
 
-/**
- * Internal service-to-service wrapper. Authenticated with a shared token in
- * constant time; never reachable from a browser session.
- */
+/** Internal service-to-service wrapper with shared token authentication. */
 export function withInternalService(
   handler: (request: NextRequest, context: { requestId: string; params: Record<string, string> }) => Promise<Response>,
 ) {
@@ -151,11 +146,7 @@ export function withInternalService(
       if (!provided || !constantTimeEquals(provided, internalServiceToken())) {
         throw ApiError.unauthorized('Invalid service credentials');
       }
-      const rawParams = routeContext?.params ? await routeContext.params : {};
-      const params: Record<string, string> = {};
-      for (const [key, value] of Object.entries(rawParams)) {
-        params[key] = Array.isArray(value) ? value[0] ?? '' : value ?? '';
-      }
+      const params = normalizeParams(await routeContext?.params);
       const response = await handler(request, { requestId, params });
       response.headers.set('x-request-id', requestId);
       return response;

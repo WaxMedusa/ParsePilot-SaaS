@@ -1,5 +1,6 @@
 import { appConfig } from '../env';
 import { logger } from '../logger';
+import type { InboundEmailMessage } from '@prisma/client';
 
 export type TransactionalEmail = {
   to: string;
@@ -12,6 +13,138 @@ export type EmailDeliveryResult = {
   sent: boolean;
   reason?: 'not_configured' | 'provider_error';
 };
+
+// ============================================================================
+// Feature 1: Inbound Email-to-Invoice Gateway
+// ============================================================================
+
+export type InboundEmailInput = {
+  workspaceSlug: string;
+  fromEmail: string;
+  subject: string;
+  bodyHtml?: string;
+  bodyText?: string;
+  attachments?: Array<{ filename: string; content: string; contentType?: string }>;
+  headers?: Record<string, string>;
+  messageId: string;
+  requestId: string;
+};
+
+export async function processInboundEmail(input: InboundEmailInput) {
+  const { prisma } = await import('../prisma');
+  const { createDocumentFromUpload } = await import('../documents/service');
+  const { ApiError } = await import('../http/errors');
+
+  // 1. Resolve workspace by slug
+  const workspace = await prisma.workspace.findUnique({
+    where: { slug: input.workspaceSlug },
+  });
+
+  if (!workspace) {
+    throw ApiError.notFound(`Workspace with slug "${input.workspaceSlug}" not found`);
+  }
+
+  // 2. Find a user to attribute upload to (owner or admin, or first member)
+  const member = await prisma.workspaceMember.findFirst({
+    where: {
+      workspaceId: workspace.id,
+      role: { in: ['owner', 'admin', 'member'] },
+    },
+    orderBy: { createdAt: 'asc' },
+    include: { user: true },
+  });
+
+  if (!member) {
+    throw ApiError.badRequest('Workspace has no active members to attribute email upload');
+  }
+
+  // 3. Record InboundEmailMessage
+  const inboundEmail = await prisma.inboundEmailMessage.create({
+    data: {
+      workspaceId: workspace.id,
+      messageId: input.messageId,
+      fromEmail: input.fromEmail,
+      to: `${input.workspaceSlug}@inbound.parsepilot.app`,
+      subject: input.subject || '(No Subject)',
+      bodyText: input.bodyText || null,
+      bodyHtml: input.bodyHtml || null,
+      headers: (input.headers ?? {}) as any,
+      status: 'received',
+    },
+  });
+
+  let createdDocument: any = null;
+  let createdJob: any = null;
+
+  try {
+    const attachments = input.attachments || [];
+    // If attachments are present, process the first valid PDF/image attachment
+    for (const att of attachments) {
+      const filename = att.filename || 'invoice.pdf';
+      const contentType = att.contentType ?? 'application/pdf';
+
+      // Decode base64 content
+      // Decode base64 content
+      let buffer: Buffer | Uint8Array;
+      try {
+        buffer = Buffer.from(att.content, 'base64');
+      } catch {
+        continue;
+      }
+
+      if (buffer.length === 0) continue;
+
+      // Construct a File-like object for createDocumentFromUpload
+      // Convert Buffer to proper ArrayBuffer using Uint8Array
+      const uint8 = new Uint8Array(buffer);
+      const file = new File([uint8.buffer], filename, { type: contentType });
+      const result = await createDocumentFromUpload({
+        workspaceId: workspace.id,
+        userId: member.userId,
+        file,
+        correlationId: input.requestId,
+        ipHash: 'inbound-email',
+      });
+
+      createdDocument = result.document;
+      createdJob = result.job;
+
+      // Link the document to the inbound email
+      await prisma.inboundEmailMessage.update({
+        where: { id: inboundEmail.id },
+        data: {
+          documentId: createdDocument.id,
+          status: 'processed',
+        },
+      });
+
+      break; // Process first valid invoice attachment for now
+    }
+
+    if (!createdDocument) {
+      // If no valid attachment found, mark inbound email as processed
+      await prisma.inboundEmailMessage.update({
+        where: { id: inboundEmail.id },
+        data: { status: 'processed' },
+      });
+    }
+
+    return { inboundEmail, document: createdDocument, job: createdJob };
+  } catch (error) {
+    await prisma.inboundEmailMessage.update({
+      where: { id: inboundEmail.id },
+      data: {
+        status: 'errored',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    throw error;
+  }
+}
+
+// ============================================================================
+// Transactional Email (existing functionality)
+// ============================================================================
 
 type EmailProvider = 'resend' | 'postmark';
 
@@ -66,7 +199,7 @@ export async function sendTransactionalEmail(message: TransactionalEmail): Promi
         : await fetch('https://api.postmarkapp.com/email', {
             method: 'POST',
             headers: {
-              'x-postmark-server-token': appConfig.email.postmarkToken,
+              'x-postmark-server-token': appConfig.email.postmarkToken!,
               'content-type': 'application/json',
             },
             body: JSON.stringify({

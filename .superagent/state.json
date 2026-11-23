@@ -1,0 +1,211 @@
+{
+ "schema": 1,
+ "seq": 5,
+ "triggers": {
+  "m1": {
+   "id": "m1",
+   "source": "chat",
+   "threads": [
+    "chat:1"
+   ],
+   "actor": {
+    "source": "chat",
+    "id": "person"
+   },
+   "human": true,
+   "addressed": "direct",
+   "at": "2026-11-23T02:00:19.123Z",
+   "text": "Plan for all edge cases that could produce issues among customers. This is a major task."
+  }
+ },
+ "dispositions": {
+  "m1": {
+   "fanout": [
+    "edge-case-plan"
+   ],
+   "context": [],
+   "handbacks": [],
+   "acked": [],
+   "at": "2026-11-23T02:00:19.123Z",
+   "evalId": "e2",
+   "decisionId": "d5"
+  }
+ },
+ "threads": {
+  "chat:1": {
+   "key": "chat:1",
+   "createdAt": "2026-11-23T02:00:19.123Z",
+   "subscriptions": [
+    "edge-case-plan"
+   ],
+   "context": [],
+   "correlated": [],
+   "pending": [],
+   "evaluating": null,
+   "expired": 0,
+   "lastAt": "2026-11-23T02:00:19.123Z"
+  }
+ },
+ "tickets": {
+  "edge-case-plan": {
+   "id": "edge-case-plan",
+   "title": "Plan all customer-facing edge cases",
+   "type": "analysis",
+   "decisionId": "d5",
+   "mandate": {
+    "strength": "explicit",
+    "policyVersion": "326adf2cdb9f",
+    "basis": {
+     "source": "chat",
+     "sender": "person",
+     "via": "addressed",
+     "addressed": "direct"
+    },
+    "actor": {
+     "source": "chat",
+     "id": "person"
+    },
+    "scope": "Produce a plan covering all edge cases that could produce issues among customers. Read-only; no code changes."
+   },
+   "channels": [
+    "chat:1"
+   ],
+   "assignments": [
+    {
+     "id": "a4",
+     "state": "ended",
+     "model": "inherit",
+     "createdAt": "2026-11-23T02:00:32.291Z",
+     "turns": [
+      {
+       "n": 1,
+       "kind": "work",
+       "priority": false,
+       "state": "ended",
+       "createdAt": "2026-11-23T02:00:32.291Z",
+       "seq": 1795399232291000,
+       "attempts": 1,
+       "inputs": [
+        "i3"
+       ],
+       "brief": ".superagent/tickets/edge-case-plan/turn-1.md",
+       "report": ".superagent/tickets/edge-case-plan/report-1.md",
+       "startedAt": "2026-11-23T02:04:12.431Z",
+       "extra": false,
+       "endedAt": "2026-11-23T02:10:49.925Z",
+       "outcome": "reported",
+       "reportState": "ready",
+       "summary": "Comprehensive edge case plan for ParsePilot covering 112 customer-facing edge cases across 9 product areas, with severity ratings and mitigation status."
+      }
+     ],
+     "startedAt": "2026-11-23T02:00:32.291Z",
+     "report": {
+      "state": "ready",
+      "summary": "Comprehensive edge case plan for ParsePilot covering 112 customer-facing edge cases across 9 product areas, with severity ratings and mitigation status.",
+      "at": "2026-11-23T02:10:49.925Z",
+      "turn": 1
+     },
+     "endedAt": "2026-11-23T02:10:49.925Z",
+     "endedReason": "completed"
+    }
+   ],
+   "inputs": [
+    {
+     "id": "i3",
+     "at": "2026-11-23T02:00:19.123Z",
+     "kind": "trigger",
+     "triggerId": "m1",
+     "human": true,
+     "deliveredTo": "a4",
+     "turn": 1
+    }
+   ],
+   "undelivered": [],
+   "answers": [],
+   "createdAt": "2026-11-23T02:00:32.290Z",
+   "updatedAt": "2026-11-23T02:10:49.925Z",
+   "origin": {
+    "triggerId": "m1",
+    "triggerIds": [
+     "m1"
+    ]
+   },
+   "note": "",
+   "req": {
+    "quality": "high",
+    "reasoning": true,
+    "differentFrom": [],
+    "prefer": [],
+    "avoid": []
+   },
+   "model": "inherit",
+   "chain": [
+    "inherit"
+   ],
+   "why": "no delegation catalog: run on the session model",
+   "thinking": null,
+   "thinkingByModel": {
+    "inherit": null
+   },
+   "ended": {
+    "at": "2026-11-23T02:10:49.925Z",
+    "by": "executor",
+    "outcome": "completed"
+   }
+  }
+ },
+ "decisions": [
+  {
+   "id": "d5",
+   "evalId": "e2",
+   "threadKey": "chat:1",
+   "triggerIds": [
+    "m1"
+   ],
+   "policyVersion": "326adf2cdb9f",
+   "at": "2026-11-23T02:00:32.291Z",
+   "strength": "explicit",
+   "kind": "accept",
+   "ticketId": "edge-case-plan",
+   "mandate": {
+    "strength": "explicit",
+    "policyVersion": "326adf2cdb9f",
+    "basis": {
+     "source": "chat",
+     "sender": "person",
+     "via": "addressed",
+     "addressed": "direct"
+    },
+    "actor": {
+     "source": "chat",
+     "id": "person"
+    },
+    "scope": "Produce a plan covering all edge cases that could produce issues among customers. Read-only; no code changes."
+   },
+   "reason": [
+    {
+     "code": "accepted",
+     "text": ""
+    }
+   ]
+  }
+ ],
+ "outbox": [
+  {
+   "id": "ack:m1",
+   "purpose": "acknowledgement",
+   "ticketId": "edge-case-plan",
+   "triggerId": "m1",
+   "text": "I'll dispatch an analysis ticket to plan every customer-facing edge case in the codebase, read-only and without code changes.",
+   "at": "2026-11-23T02:00:32.291Z"
+  },
+  {
+   "id": "reply:edge-case-plan:3231d47182",
+   "purpose": "result",
+   "ticketId": "edge-case-plan",
+   "triggerId": null,
+   "text": "The edge-case plan is complete: 112 customer-facing edge cases across 9 areas, with 99 covered, 5 gaps, and 8 partial. The 5 gaps sit in non-critical paths (export memory pressure, CSV formula injection, near-duplicate detection, line-item extraction coverage, Stripe price-ID mapping); the full plan with code references and severities is at .superagent/tickets/edge-case-plan/report-1.md.",
+   "at": "2026-11-23T02:11:30.242Z"
+  }
+ ]
+}

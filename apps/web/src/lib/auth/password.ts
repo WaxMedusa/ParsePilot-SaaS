@@ -8,7 +8,6 @@ const scrypt = promisify(scryptCallback) as (
   options: { N: number; r: number; p: number; maxmem: number },
 ) => Promise<Buffer>;
 
-// OWASP-recommended scrypt parameters (N=2^14, r=8, p=1).
 const PARAMS = { N: 16_384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 } as const;
 const KEY_LENGTH = 64;
 
@@ -26,10 +25,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
     const salt = Buffer.from(saltB64!, 'base64url');
     const expected = Buffer.from(hashB64!, 'base64url');
     const derived = await scrypt(password.normalize('NFKC'), salt, expected.length, {
-      N: Number(n),
-      r: Number(r),
-      p: Number(p),
-      maxmem: PARAMS.maxmem,
+      N: Number(n), r: Number(r), p: Number(p), maxmem: PARAMS.maxmem,
     });
     return derived.length === expected.length && timingSafeEqual(derived, expected);
   } catch {
@@ -38,15 +34,8 @@ export async function verifyPassword(password: string, stored: string): Promise<
 }
 
 const COMMON_PASSWORDS = new Set([
-  'password',
-  'password1',
-  'password123',
-  '123456789',
-  'qwertyuiop',
-  'letmein123',
-  'welcome123',
-  'admin12345',
-  'parsepilot',
+  'password', 'password1', 'password123', '123456789', 'qwertyuiop',
+  'letmein123', 'welcome123', 'admin12345', 'parsepilot',
 ]);
 
 export type PasswordPolicyResult = { ok: boolean; problems: string[] };

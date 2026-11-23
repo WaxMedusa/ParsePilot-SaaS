@@ -4,12 +4,8 @@ import { verifySupabaseAccessToken } from './supabase';
 const originalUrl = process.env.SUPABASE_URL;
 const originalKey = process.env.SUPABASE_ANON_KEY;
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 describe('verifySupabaseAccessToken', () => {
   beforeEach(() => {
